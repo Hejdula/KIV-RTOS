@@ -54,6 +54,10 @@ context_switch:
     str sp, [r1, #4]        ;@ ulozit SP stareho procesu
 
     ldr r12, [r0, #12]      ;@ nacist TTBR0 (tabulka stranek a priznaky) do r12
+    ldr r2,  [r1, #12]      ;@ nacist TTBR0 stareho kontextu
+    cmp r12, r2             ;@ porovnat jestli se meni tabulka stranek
+    beq .after_ttbr0_load    ;@ pokud ne tak nemusime nacitat tabulku stranek (mame ji uz nactenou)
+
     mcr p15, 0, r12, c2, c0, 0  ;@ nacist novy obsah TTBR0
 
     mov r1, #0                  ;@ data barrier, vymazat cache a TLB
@@ -61,6 +65,7 @@ context_switch:
     mcr p15, 0, r1, c8, c7, 0
     mcr p15, 0, r1, c7, c7, 0
 
+.after_ttbr0_load:
     ldr sp, [r0, #4]        ;@ nacist SP noveho procesu
 
     pop {r0-r12}            ;@ obnovit registry noveho procesu
