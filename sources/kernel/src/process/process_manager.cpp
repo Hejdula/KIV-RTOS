@@ -1,6 +1,7 @@
 #include <process/process_manager.h>
 #include <process/resource_manager.h>
 #include <process/elf_loader.h>
+#include <process/thread.h>
 
 #include <memory/kernel_heap.h>
 #include <memory/pages.h>
@@ -98,6 +99,7 @@ bool CProcess_Manager::Notify_Process(TTask_Struct* proc) {
 uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system) {
     CProcess_List_Node* procnode = sKernelMem.Alloc<CProcess_List_Node>();
 
+    // zarazeni do spojoveho seznamu procesu
     procnode->next = mProcess_List_Head;
     procnode->prev = nullptr;
     mProcess_List_Head->prev = procnode;
@@ -107,17 +109,30 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
         mCurrent_Task_Node = procnode;
     }
 
+    // alokace pameti pro task data
     procnode->task = sKernelMem.Alloc<TTask_Struct>();
-
     auto* task = procnode->task;
-
+    //nastaveni task data
     task->pid = ++mLast_PID;
-    task->sched_static_priority = 5;    // TODO: pro ted je to jen hardcoded hodnota, do budoucna urcite bude nutne dovolit specifikovat
+    task->sched_static_priority = 5;    // xTODO: pro ted je to jen hardcoded hodnota, do budoucna urcite bude nutne dovolit specifikovat
+    
+    /* TODO - co by se tu melo dit
+        - volam zakladani prvniho threadu - asi funkce "create first thread", ktera bude volat "create thread", ktera bude volana handlerem neceho jako "pthread_create()"
+        - inkrementovat pocitadlo threadu, dat do seznamu threadu prvni thread
+    */
+
+    /* TODO tyhle veci se budou zakladat v threadu
+    - dedime od tasku
+    - zakladame vlastni zasobnik
+    - ziskame nekde adresu haldy (lol halda tu vubec neni implementovana, to chce jeste prozkoumat jak ze to funguje)
+    - kdyz zakladame prvni thread tak do nej uplne stejne nahrajeme kod
+
     task->sched_counter = task->sched_static_priority;
     task->state = NTask_State::New;
     task->deadline = Indefinite; // task si zatim nestanovil deadline, udela to az to bude aktualni v deadline syscallu
     task->notified_deadline = Indefinite;
     task->page_count = 0;
+    
 
     // lr = co zacit vykonavat po bootstrapu, 0x8000 je misto, kam je relokovany v kazde nasi binarce symbol _start, tedy vstupni bod programu
     //task->cpu_context.lr = 0x8000;
@@ -168,11 +183,14 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     task->cpu_context.ttbr0 = (reinterpret_cast<unsigned long>(pt) - mem::MemoryVirtualBase)
         | TTBR_Flags::Inner_Cacheable
         | TTBR_Flags::Shared;
+    */
 
+    // nullpointery na otevrene soubory
     for (uint32_t i = 0; i < Max_Process_Opened_Files; i++) {
         task->opened_files[i] = nullptr;
     }
 
+    
     return task->pid;
 }
 
