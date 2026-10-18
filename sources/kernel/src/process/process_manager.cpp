@@ -114,7 +114,7 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     auto* task = procnode->task;
     //nastaveni task data
     task->pid = ++mLast_PID;
-    task->sched_static_priority = 5;    // xTODO: pro ted je to jen hardcoded hodnota, do budoucna urcite bude nutne dovolit specifikovat
+    task->sched_static_priority = 5;    // xTODO: pro ted je to jen hardcoded hodnota, do budoucna urcite bude nutne dovolit specifikovat - by se mohlo proste predavat jako argument funkce...
     
     /* TODO - co by se tu melo dit
         - volam zakladani prvniho threadu - asi funkce "create first thread", ktera bude volat "create thread", ktera bude volana handlerem neceho jako "pthread_create()"
@@ -126,6 +126,8 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     - zakladame vlastni zasobnik
     - ziskame nekde adresu haldy (lol halda tu vubec neni implementovana, to chce jeste prozkoumat jak ze to funguje)
     - kdyz zakladame prvni thread tak do nej uplne stejne nahrajeme kod
+
+
 
     task->sched_counter = task->sched_static_priority;
     task->state = NTask_State::New;
@@ -188,6 +190,10 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     // nullpointery na otevrene soubory
     for (uint32_t i = 0; i < Max_Process_Opened_Files; i++) {
         task->opened_files[i] = nullptr;
+    }
+    // nullpointery na vsechna ostatni vlakna (krome hlavniho vlakna procesu)
+    for (uint32_t i = 1; i < Max_Process_Threads; i++) {
+        task->threads[i] = nullptr;
     }
 
     
