@@ -222,21 +222,21 @@ bool IFile::Wait_Dequeue_Process(uint32_t pid) {
 
 uint32_t IFile::Notify(uint32_t count) {
 
-    spinlock_lock(&mWait_Lock);
+    spinlock_lock(&mWait_Lock); //zamknu zamek tohoto konkretniho souboru
 
     TWaiting_Task* tmp;
     TWaiting_Task* itr = mWaiting_Tasks;
-    while (itr && itr->next) {
+    while (itr && itr->next) { //najdu zacatek fronty cekajicich procesu
         itr = itr->next;
     }
 
     uint32_t notified_count = 0;
-    while (itr && notified_count < count) {
-        sProcessMgr.Notify_Process(itr->pid, this);
+    while (itr && notified_count < count) { //dokud nenotifikuju count procesu
+        sProcessMgr.Notify_Process(itr->pid, this); //notifikuju proces 
 
-        tmp = itr;
+        tmp = itr; 
 
-        itr = itr->prev;
+        itr = itr->prev;  //a posouvam se ve fronte dal
         delete tmp;
         notified_count++;
 
