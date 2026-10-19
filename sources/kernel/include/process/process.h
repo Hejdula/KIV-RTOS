@@ -3,7 +3,7 @@
 
 // maximalni pocet otevrenych souboru
 constexpr uint32_t Max_Process_Opened_Files = 16;
-// maximalni pocet otevrenych souboru
+// maximalni pocet vlaken
 constexpr uint32_t Max_Process_Threads = 16;
 
 // hodnota, ktera znamena, ze proces nema casovy limit na vzbuzeni / deadline
