@@ -81,18 +81,17 @@ bool CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file) {
     return Notify_Process(task);
 }
 
-// TODO: bude notifikovat uz konkretni vlakno, budeme pracovat s TThread_struct
-bool CProcess_Manager::Notify_Process(TTask_Struct* proc) {
-    if (!proc) {
+bool CProcess_Manager::Notify_Thread(TThread_Struct* thread) {
+    if (!thread) {
         return false;
     }
 
     // ve slozitejsich planovacich by tady mohl byt treba i presun do jine fronty procesu, apod.
-    proc->state = NTask_State::Runnable;
+    thread->state = NThread_State::Runnable;
 
     // pokud byla nastavena "budouci" deadline, nastavime skutecnou deadline
-    if (proc->notified_deadline != Deadline_Unchanged) {
-        proc->deadline = sTimer.Get_Tick_Count() + proc->notified_deadline;
+    if (thread->notified_deadline != Deadline_Unchanged) {
+        thread->deadline = sTimer.Get_Tick_Count() + thread->notified_deadline;
     }
     // pozor: tady nesmime mazat budouci deadline - co kdyby byl proces probuzen falesne? (stolen wakeup)
     //        v kernelu by se to sice stavat uplne nemelo, ale co kdybychom se nekde upsali
@@ -215,7 +214,7 @@ void CProcess_Manager::Schedule() {
         while (node) {
             if (node->task->state == NTask_State::Interruptable_Sleep) {
                 if (node->task->sleep_timer != Indefinite && node->task->sleep_timer <= sTimer.Get_Tick_Count()) {
-                    Notify_Process(node->task);
+                    Notify_Thread(node->task); // TODO: je treba prochazet/planovat vlakna misto procesu
                 }
             }
 

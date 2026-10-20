@@ -54,7 +54,7 @@ class CProcess_Manager {
     private:
         void Switch_To(CProcess_List_Node* node);
 
-        bool Notify_Process(TTask_Struct* proc);
+        bool Notify_Thread(TThread_Struct* proc);
 
     protected:
         // round-robin planovac (se statickou prioritou)
