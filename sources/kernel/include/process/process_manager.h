@@ -47,6 +47,8 @@ class CProcess_Manager {
         CProcess_List_Node* mProcess_List_Head;
 
         // uzel procesu, ktery je prave naplanovan
+        // TODO: budou se planovat vlakna a na spouste mistech kde se mCurrent_Task_Node pouziva se
+        // bude pouzivat current_running_thread, ale jinde se zas pracuje jen s atributama procesu ktere mu zustanou
         CProcess_List_Node* mCurrent_Task_Node;
 
     private:
@@ -87,6 +89,7 @@ class CProcess_Manager {
 
         // odmapuje soubor z daneho handle
         bool Unmap_File_Current(uint32_t handle);
+
 
         // zavre vsechny soubory procesu
         void Close_All_Files(TTask_Struct* task);

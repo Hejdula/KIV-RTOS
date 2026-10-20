@@ -47,6 +47,7 @@ TTask_Struct* CProcess_Manager::Get_Process_By_PID(uint32_t pid) const {
     return nullptr;
 }
 
+// TODO: v budoucnu budeme blokovat vlakno, prejmenuje se na Block_Current_Thread
 void CProcess_Manager::Block_Current_Process() {
     TTask_Struct* cur = Get_Current_Process();
 
@@ -59,6 +60,8 @@ void CProcess_Manager::Block_Current_Process() {
     Schedule();
 }
 
+// TODO: IFile bude stale notifikovat process, ale vnitrne bude process, 
+// resp. kazde vlakno mit ulozene nad kterymi soubory ceka a nasledne se notifikuji vlakna kterych se to tyka
 bool CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file) {
     TTask_Struct* task = Get_Process_By_PID(pid);
     if (!task || task->state != NTask_State::Blocked) {
@@ -78,6 +81,7 @@ bool CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file) {
     return Notify_Process(task);
 }
 
+// TODO: bude notifikovat uz konkretni vlakno, budeme pracovat s TThread_struct
 bool CProcess_Manager::Notify_Process(TTask_Struct* proc) {
     if (!proc) {
         return false;
@@ -116,16 +120,17 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     task->pid = ++mLast_PID;
     task->sched_static_priority = 5;    // xTODO: pro ted je to jen hardcoded hodnota, do budoucna urcite bude nutne dovolit specifikovat - by se mohlo proste predavat jako argument funkce...
     
-    /* TODO - co by se tu melo dit
+    /* TODO: - co by se tu melo dit
         - volam zakladani prvniho threadu - asi funkce "create first thread", ktera bude volat "create thread", ktera bude volana handlerem neceho jako "pthread_create()"
         - inkrementovat pocitadlo threadu, dat do seznamu threadu prvni thread
     */
 
-    /* TODO tyhle veci se budou zakladat v threadu
+    /* TODO: tyhle veci se budou zakladat v threadu
     - dedime od tasku
-    - zakladame vlastni zasobnik
-    - ziskame nekde adresu haldy (lol halda tu vubec neni implementovana, to chce jeste prozkoumat jak ze to funguje)
-    - kdyz zakladame prvni thread tak do nej uplne stejne nahrajeme kod
+    - haldu resit nemusime, o tu si thread rika syscallem
+    - vytvorit tabulku stranek pro process.
+    - alokovat stranku pro kod a dat ho tam stejne jako ted
+    - vytvoreni prvniho thread a jeho zasobniku + pc na entry point kodu
 
 
 
@@ -200,6 +205,8 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     return task->pid;
 }
 
+// TODO: presuneme do CScheduler, bude planovat jednotlive threads misto task/process,
+// thread pak potrebuje mit svou deadline dle ktere se bude planovat
 void CProcess_Manager::Schedule() {
 
     // projdeme vsechny uspane (sleep) procesy, zda je na case je vzbudit
@@ -291,6 +298,15 @@ bool CProcess_Manager::Unmap_File_Current(uint32_t handle) {
     }
 
     current->opened_files[handle] = nullptr;
+    // TODO: bude treba resit kdyz ruzne threads na soubor cekaji,
+    // ted se tohle stalo jen kdyz proces bezel a zavolal close, 
+    // handle se invalidovalo a pak uz nemohl nad nim cekat, ale ted muze close
+    // zavolat jakekoli vlakno a tim padem ostatni kdo cekaji se musi vzbudit.
+    // Co kdyz se mezitim nez se thread vzbudi na handle namapuje jiny soubor a tedy 
+    // jinemu thread se zmeni soubor na ktery ceka aniz by to vedel?
+    // Nebo spise kazde vlakno bude mit svou bitmap s otevrenymi files a soubor ho 
+    // zavre jen kdyz uz zadne z vlaken nema soubor otevreny a pak by se tohle muselo 
+    // o level vyse v Handle_xxx_SWI
     return true;
 }
 
@@ -453,6 +469,7 @@ void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, ui
     }
 }
 
+// TODO: TThread_struct misto TTask_Struct, jinak by mohlo fungovat stejne
 void CProcess_Manager::Handle_WaitAll_SWI(uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result &target)
 {
     target.r0 = Invalid_Handle;
