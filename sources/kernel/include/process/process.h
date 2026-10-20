@@ -1,5 +1,6 @@
 #pragma once
 
+#include <hal/intdef.h>
 
 // maximalni pocet otevrenych souboru
 constexpr uint32_t Max_Process_Opened_Files = 16;
@@ -31,7 +32,7 @@ class IFile;
 struct TThread_Struct;
 
 // struktura procesu (tasku, ...)
-struct TTask_Struct {
+struct TProcess_Struct {
     //TCPU_Context cpu_context;                   // ulozeny kontext procesoru - misto toho v thread
     unsigned int pid;                           // ID procesu, kladne nenulove cislo
     //NTask_State state;                          // stav procesu - misto toho v thread

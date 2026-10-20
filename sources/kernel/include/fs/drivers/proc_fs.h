@@ -61,7 +61,7 @@ class CProcFS_Task_File__Status : public CProcFS_Task_File {
         CProcFS_Task_File__Status(int pid) : CProcFS_Task_File(pid) {}
 
         virtual uint32_t Read(char* buffer, uint32_t num) override {
-            TTask_Struct *task = sProcessMgr.Get_Process_By_PID(mPID);
+            TProcess_Struct *task = sProcessMgr.Get_Process_By_PID(mPID);
             if (!task) {
                 return 0;
             }
@@ -82,7 +82,7 @@ class CProcFS_Task_File__FD_Count : public CProcFS_Task_File {
         CProcFS_Task_File__FD_Count(int pid) : CProcFS_Task_File(pid) {}
 
         virtual uint32_t Read(char* buffer, uint32_t num) override {
-            TTask_Struct *task = sProcessMgr.Get_Process_By_PID(mPID);
+            TProcess_Struct *task = sProcessMgr.Get_Process_By_PID(mPID);
             if (!task) {
                 return 0;
             }
@@ -108,7 +108,7 @@ class CProcFS_Task_File__FD : public CProcFS_Task_File {
         CProcFS_Task_File__FD(int pid) : CProcFS_Task_File(pid) {}
 
         virtual uint32_t Read(char* buffer, uint32_t num) override {
-            TTask_Struct *task = sProcessMgr.Get_Process_By_PID(mPID);
+            TProcess_Struct *task = sProcessMgr.Get_Process_By_PID(mPID);
             if (!task) {
                 return 0;
             }
@@ -136,7 +136,7 @@ class CProcFS_Task_File__Summary : public CProcFS_Task_File {
         CProcFS_Task_File__Summary(int pid) : CProcFS_Task_File(pid) {}
 
         virtual uint32_t Read(char* buffer, uint32_t num) override {
-            TTask_Struct *task = sProcessMgr.Get_Process_By_PID(mPID);
+            TProcess_Struct *task = sProcessMgr.Get_Process_By_PID(mPID);
             if (!task) {
                 return 0;
             }
@@ -172,7 +172,7 @@ class CProcFS_Task_File__Page_Count : public CProcFS_Task_File {
         CProcFS_Task_File__Page_Count(int pid) : CProcFS_Task_File(pid) {}
 
         virtual uint32_t Read(char* buffer, uint32_t num) override {
-            TTask_Struct *task = sProcessMgr.Get_Process_By_PID(mPID);
+            TProcess_Struct *task = sProcessMgr.Get_Process_By_PID(mPID);
             if (!task) {
                 return 0;
             }
@@ -320,7 +320,7 @@ class CProc_FS_Driver : public IFilesystem_Driver {
                 // resolve pid + task
                 uint32_t pid = 0;
                 if (self) {
-                    TTask_Struct *task = sProcessMgr.Get_Current_Process();
+                    TProcess_Struct *task = sProcessMgr.Get_Current_Process();
                     if (!task) {
                         return nullptr;
                     }

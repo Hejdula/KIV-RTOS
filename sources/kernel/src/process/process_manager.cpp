@@ -1,3 +1,4 @@
+#include <cstdint>
 #include <process/process_manager.h>
 #include <process/resource_manager.h>
 #include <process/elf_loader.h>
@@ -30,11 +31,11 @@ CProcess_Manager::CProcess_Manager()
     mSchedule_Fnc = &CProcess_Manager::Schedule_EDF;
 }
 
-TTask_Struct* CProcess_Manager::Get_Current_Process() const {
+TProcess_Struct* CProcess_Manager::Get_Current_Process() const {
     return mCurrent_Task_Node ? mCurrent_Task_Node->task : nullptr;
 }
 
-TTask_Struct* CProcess_Manager::Get_Process_By_PID(uint32_t pid) const {
+TProcess_Struct* CProcess_Manager::Get_Process_By_PID(uint32_t pid) const {
     CProcess_List_Node* node = mProcess_List_Head;
     while (node != nullptr) {
         if (node->task->pid == pid) {
@@ -49,36 +50,48 @@ TTask_Struct* CProcess_Manager::Get_Process_By_PID(uint32_t pid) const {
 
 // TODO: v budoucnu budeme blokovat vlakno, prejmenuje se na Block_Current_Thread
 void CProcess_Manager::Block_Current_Process() {
-    TTask_Struct* cur = Get_Current_Process();
+    TProcess_Struct* cur = Get_Current_Process();
 
     cur->state = NTask_State::Blocked;
 
-    // TODO: doopravdy to takto chceme?
+    // xTODO: doopravdy to takto chceme?
     //if (cur->notified_deadline != Deadline_Unchanged)
     //    cur->deadline = Indefinite;
 
     Schedule();
 }
 
-// TODO: IFile bude stale notifikovat process, ale vnitrne bude process, 
-// resp. kazde vlakno mit ulozene nad kterymi soubory ceka a nasledne se notifikuji vlakna kterych se to tyka
 bool CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file) {
-    TTask_Struct* task = Get_Process_By_PID(pid);
-    if (!task || task->state != NTask_State::Blocked) {
+    TProcess_Struct* process = Get_Process_By_PID(pid);
+    if (!process){
         return false;
     }
 
-    // pokud task ceka pomoci WaitAll na vice souboru, je treba ulozit, ze ktereho souboru prisla notifikace
-    if (task->is_multi_file_wait) {
-        for (uint32_t i = 0; i < Max_Process_Opened_Files; i++) {
-            if (task->opened_files[i] == notifier_file) {
-                task->multi_wait_ready_fd = i;
-                break;
+    // najdeme index otevreneho souboru
+    uint32_t handle_index = 0;
+    for (handle_index = 0; handle_index < Max_Process_Opened_Files; ++handle_index){
+        if(process->opened_files[handle_index] == notifier_file){
+            break;
+        }
+    } 
+
+    if(handle_index == Max_Process_Opened_Files){
+        // tohle by nemelo nastat pokud kernel funguje spravne
+        return false; 
+    }
+    
+
+    bool notified_some;
+    for (TThread_Struct* thread :process->threads){
+        if(thread->fd_bitmap & 1 << handle_index){
+            if(thread->is_multi_file_wait){
+                thread->multi_wait_ready_fd = handle_index;
             }
+            notified_some |= Notify_Thread(thread);
         }
     }
 
-    return Notify_Process(task);
+    return notified_some;
 }
 
 bool CProcess_Manager::Notify_Thread(TThread_Struct* thread) {
@@ -113,7 +126,7 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     }
 
     // alokace pameti pro task data
-    procnode->task = sKernelMem.Alloc<TTask_Struct>();
+    procnode->task = sKernelMem.Alloc<TProcess_Struct>();
     auto* task = procnode->task;
     //nastaveni task data
     task->pid = ++mLast_PID;
@@ -268,7 +281,7 @@ void CProcess_Manager::Switch_To(CProcess_List_Node* node) {
 uint32_t CProcess_Manager::Map_File_To_Current(IFile* file) {
     // TODO: zamek
 
-    TTask_Struct* current = Get_Current_Process();
+    TProcess_Struct* current = Get_Current_Process();
     if (!current) {
         return Invalid_Handle;
     }
@@ -287,7 +300,7 @@ uint32_t CProcess_Manager::Map_File_To_Current(IFile* file) {
 }
 
 bool CProcess_Manager::Unmap_File_Current(uint32_t handle) {
-    TTask_Struct* current = Get_Current_Process();
+    TProcess_Struct* current = Get_Current_Process();
     if (!current || handle >= Max_Process_Opened_Files) {
         return false;
     }
@@ -309,7 +322,7 @@ bool CProcess_Manager::Unmap_File_Current(uint32_t handle) {
     return true;
 }
 
-void CProcess_Manager::Close_All_Files(TTask_Struct* task) {
+void CProcess_Manager::Close_All_Files(TProcess_Struct* task) {
     if (!task) {
         return;
     }
@@ -480,7 +493,7 @@ void CProcess_Manager::Handle_WaitAll_SWI(uint32_t r0, uint32_t r1, uint32_t r2,
         return;
     }
 
-    TTask_Struct *task = mCurrent_Task_Node->task;
+    TProcess_Struct *task = mCurrent_Task_Node->task;
 
     for (uint32_t i = 0; i < handle_count; i++) {
         if (handles[i] >= Max_Process_Opened_Files || !task->opened_files[handles[i]]) {

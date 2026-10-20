@@ -35,7 +35,7 @@ struct CProcess_Summary_Info {
 struct CProcess_List_Node {
     CProcess_List_Node* prev;
     CProcess_List_Node* next;
-    TTask_Struct* task;
+    TProcess_Struct* task;
 };
 
 class CProcess_Manager {
@@ -54,7 +54,7 @@ class CProcess_Manager {
     private:
         void Switch_To(CProcess_List_Node* node);
 
-        bool Notify_Thread(TThread_Struct* proc);
+        bool Notify_Thread(TThread_Struct* thread);
 
     protected:
         // round-robin planovac (se statickou prioritou)
@@ -74,10 +74,10 @@ class CProcess_Manager {
         void Schedule();
 
         // vrati strukturu procesu, ktery je v tento moment naplanovan
-        TTask_Struct* Get_Current_Process() const;
+        TProcess_Struct* Get_Current_Process() const;
 
         // vrati strukturu procesu se zadanym PID, nebo nullptr, pokud proces neexistuje
-        TTask_Struct* Get_Process_By_PID(uint32_t pid) const;
+        TProcess_Struct* Get_Process_By_PID(uint32_t pid) const;
 
         // blokuje soucasny proces (zatim v generickem stavu "Blocked"), preplanuje na jiny proces
         void Block_Current_Process();
@@ -92,7 +92,7 @@ class CProcess_Manager {
 
 
         // zavre vsechny soubory procesu
-        void Close_All_Files(TTask_Struct* task);
+        void Close_All_Files(TProcess_Struct* task);
 
         // softwarova preruseni pro process facility
         void Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target);
