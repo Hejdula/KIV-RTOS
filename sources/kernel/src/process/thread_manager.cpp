@@ -1,6 +1,6 @@
 #include "thread_manager.h"
 
-CThread_Manager sThread_Manager;
+
 
 inline TThread_Struct *CThread_Manager::Create_Thread()
 {
@@ -8,7 +8,7 @@ inline TThread_Struct *CThread_Manager::Create_Thread()
 
 }
 
-TThread_Struct *CThread_Manager::Create_First_Thread(unsigned char *elf_file_data, unsigned int elf_file_length, bool is_system)
+void CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system)
 {
-    return nullptr;
+    return ;
 }

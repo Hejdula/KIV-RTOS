@@ -25,9 +25,9 @@ public:
     ~CThread_Manager();
 
     // Vytvori prvni vlakno procesu, nahraje kod do pameti
-    TThread_Struct* Create_First_Thread(TProcess_Struct* process, unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system);
+    void Create_First_Thread(TProcess_Struct* process, unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system);
     // Vytvori vlakno dle volajiciho rodice
-    TThread_Struct* Fork_Thread(TThread_Struct* parent);
+    void Fork_Thread(TThread_Struct* parent);
     //ziska TID prave naplanovaneho vlakna (pro systemove volani )
     uint32_t Get_Current_TID();
 

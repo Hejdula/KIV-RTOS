@@ -4,6 +4,7 @@
 #include <process/elf_loader.h>
 #include <process/thread.h>
 
+
 #include <memory/kernel_heap.h>
 #include <memory/pages.h>
 #include <memory/memmap.h>
@@ -24,6 +25,7 @@ extern "C" {
 };
 
 CProcess_Manager sProcessMgr;
+CThread_Manager sThreadMgr;
 
 CProcess_Manager::CProcess_Manager()
     : mLast_PID(0), mProcess_List_Head(nullptr), mCurrent_Task_Node(nullptr) {
@@ -125,7 +127,7 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
         mCurrent_Task_Node = procnode;
     }
 
-    // alokace pameti pro task data
+    // alokace pameti pro process data
     procnode->process = sKernelMem.Alloc<TProcess_Struct>();
     auto* process = procnode->process;
     //nastaveni process data
@@ -140,8 +142,8 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     for (uint32_t i = 0; i < Max_Process_Threads; i++) {
         process->threads[i] = nullptr;
     } 
-    // TODO: vyresit kdo bude mit instanci koho, nebo jestli proste thread manager bude globalni staticka trida...
-    sThread_Manager.Create_First_Thread(process, elf_file_data, elf_file_length, is_system);
+
+    sThreadMgr.Create_First_Thread(process, elf_file_data, elf_file_length, is_system);
 
     /* TODO: tyhle veci se budou zakladat v threadu
     - dedime od processu
