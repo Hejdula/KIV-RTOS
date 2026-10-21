@@ -16,7 +16,7 @@
 #include <drivers/uart.h>
 #include <drivers/timer.h>
 
-// "importovane" funkce z asm
+// "importovane" funkce z asm - TODO: smazat, prestehovano do thread manageru
 extern "C" {
     void user_process_bootstrap();
     void system_process_bootstrap();
@@ -139,19 +139,27 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     //nastaveni process data
     process->pid = ++mLast_PID;
     process->sched_static_priority = 5;    // xTODO: pro ted je to jen hardcoded hodnota, do budoucna urcite bude nutne dovolit specifikovat - by se mohlo proste predavat jako argument funkce...
-    
-    /* TODO: - co by se tu melo dit
+    process->page_count = 0;
+
+    /* DTODO: - co by se tu melo dit - DONE
         - volam zakladani prvniho threadu - asi funkce "create first thread", ktera bude volat "create thread", ktera bude volana handlerem neceho jako "pthread_create()"
-        - inkrementovat pocitadlo threadu, dat do seznamu threadu prvni thread
+        - inkrementovat pocitadlo threadu, dat do seznamu threadu prvni thread 
     */
-    // nullpointery na vsechna vlakna - zakladat se da jenom tam kde je nullpointer
+    // nullpointery na vsechna vlakna - zakladat se da jenom tam kde je nullpointer (hlida thread manager)
     for (uint32_t i = 0; i < Max_Process_Threads; i++) {
         process->threads[i] = nullptr;
     } 
 
-    sThreadMgr.Create_First_Thread(process, elf_file_data, elf_file_length, is_system);
+    // zalozime prvni vlakno procesu
+    if (sThreadMgr.Create_First_Thread(process, elf_file_data, elf_file_length, is_system) == Invalid_TID) {
+        // pokud se nepodarilo zalozeni, uvolnime alokovane zdroje a vratime chybu
+        sKernelMem.Free(procnode->process);
+        sKernelMem.Free(procnode);
+        return Invalid_PID;
+    }
 
-    /* TODO: tyhle veci se budou zakladat v threadu
+
+    /* DTODO: tyhle veci se budou zakladat v threadu
     - dedime od processu
     - haldu resit nemusime, o tu si thread rika syscallem
     - vytvorit tabulku stranek pro process.
