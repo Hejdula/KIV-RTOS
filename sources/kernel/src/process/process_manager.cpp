@@ -26,20 +26,24 @@ extern "C" {
 CProcess_Manager sProcessMgr;
 
 CProcess_Manager::CProcess_Manager()
-    : mLast_PID(0), mProcess_List_Head(nullptr), mCurrent_Task_Node(nullptr) {
+    : mLast_PID(0), mProcess_List_Head(nullptr), mCurrent_Process_Node(nullptr), mCurrent_Thread(nullptr) {
     //mSchedule_Fnc = &CProcess_Manager::Schedule_RR;
     mSchedule_Fnc = &CProcess_Manager::Schedule_EDF;
 }
 
 TProcess_Struct* CProcess_Manager::Get_Current_Process() const {
-    return mCurrent_Task_Node ? mCurrent_Task_Node->task : nullptr;
+    return mCurrent_Process_Node ? mCurrent_Process_Node->process : nullptr;
+}
+
+TThread_Struct* CProcess_Manager::Get_Current_Thread() const {
+    return mCurrent_Thread;
 }
 
 TProcess_Struct* CProcess_Manager::Get_Process_By_PID(uint32_t pid) const {
     CProcess_List_Node* node = mProcess_List_Head;
     while (node != nullptr) {
-        if (node->task->pid == pid) {
-            return node->task;
+        if (node->process->pid == pid) {
+            return node->process;
         }
 
         node = node->next;
@@ -48,8 +52,9 @@ TProcess_Struct* CProcess_Manager::Get_Process_By_PID(uint32_t pid) const {
     return nullptr;
 }
 
+
 // TODO: v budoucnu budeme blokovat vlakno, prejmenuje se na Block_Current_Thread
-void CProcess_Manager::Block_Current_Process() {
+void CProcess_Manager::Block_Current_Thread() {
     TProcess_Struct* cur = Get_Current_Process();
 
     cur->state = NTask_State::Blocked;
@@ -81,6 +86,7 @@ bool CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file) {
     }
     
 
+    // postupne vzbudime vsechny vlakna ktere cekaji nad danym souborem
     bool notified_some;
     for (TThread_Struct* thread :process->threads){
         if(thread->fd_bitmap & 1 << handle_index){
@@ -319,7 +325,7 @@ bool CProcess_Manager::Unmap_File_Current(uint32_t handle) {
     // zavolat jakekoli vlakno a tim padem ostatni kdo cekaji se musi vzbudit.
     // Co kdyz se mezitim nez se thread vzbudi na handle namapuje jiny soubor a tedy 
     // jinemu thread se zmeni soubor na ktery ceka aniz by to vedel?
-    // Nebo spise kazde vlakno bude mit svou bitmap s otevrenymi files a soubor ho 
+    // Nebo spise kazde vlakno ma svou bitmap s otevrenymi files a soubor ho 
     // zavre jen kdyz uz zadne z vlaken nema soubor otevreny a pak by se tohle muselo 
     // o level vyse v Handle_xxx_SWI
     return true;
@@ -531,7 +537,7 @@ void CProcess_Manager::Handle_WaitAll_SWI(uint32_t r0, uint32_t r1, uint32_t r2,
 
     bool file_ready = false;
     while (!file_ready) {
-        Block_Current_Process();
+        Block_Current_Thread();
 
         // pokusime se po probuzeni ziskat resource od probouzejiciho souboru, a pokud se to povede, smycka skonci
         if (task->multi_wait_ready_fd != Invalid_Handle && task->opened_files[task->multi_wait_ready_fd]->Wait_All_Acquire(1)) {

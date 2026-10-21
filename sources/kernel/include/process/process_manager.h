@@ -47,10 +47,15 @@ class CProcess_Manager {
         // uvodni uzel spojoveho seznamu procesu
         CProcess_List_Node* mProcess_List_Head;
 
-        // uzel procesu, ktery je prave naplanovan
-        // TODO: budou se planovat vlakna a na spouste mistech kde se mCurrent_Task_Node pouziva se
-        // bude pouzivat current_running_thread, ale jinde se zas pracuje jen s atributama procesu ktere mu zustanou
-        CProcess_List_Node* mCurrent_Task_Node;
+        // CProcess_List_Node* mCurrent_Task_Node;
+        // TODO: k prave bezicimu 'tasku' pristupovalo pomoci mCurrent_Task_Node,
+        // budou se planovat vlakna a bylo by vhodne rozdelit na mCurrent_Thread a mCurrent_Process_Node
+        // na mCurrent_Task_Node je aktualne 50+ referenci, tak tohle bude treba projit jedno po druhem
+
+        // uzel procesu prave beziciho vlakn
+        CProcess_List_Node* mCurrent_Process_Node;
+        // prave bezici vlakno
+        TThread_Struct* mCurrent_Thread;
 
     private:
         void Switch_To(CProcess_List_Node* node);
@@ -77,11 +82,13 @@ class CProcess_Manager {
         // vrati strukturu procesu, ktery je v tento moment naplanovan
         TProcess_Struct* Get_Current_Process() const;
 
+        TThread_Struct* Get_Current_Thread() const;
+
         // vrati strukturu procesu se zadanym PID, nebo nullptr, pokud proces neexistuje
         TProcess_Struct* Get_Process_By_PID(uint32_t pid) const;
 
         // blokuje soucasny proces (zatim v generickem stavu "Blocked"), preplanuje na jiny proces
-        void Block_Current_Process();
+        void Block_Current_Thread();
         // notifikuje blokovany proces (napr. spici nad mutexem, souborem, ...)
         bool Notify_Process(uint32_t pid, IFile* notifier_file);
 
