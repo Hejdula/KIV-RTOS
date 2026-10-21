@@ -4,6 +4,7 @@
 
 #include "process.h"
 #include "swi.h"
+#include "thread_manager.h"
 #include <fs/filesystem.h>
 #include <stdstring.h>
 
@@ -35,7 +36,7 @@ struct CProcess_Summary_Info {
 struct CProcess_List_Node {
     CProcess_List_Node* prev;
     CProcess_List_Node* next;
-    TProcess_Struct* task;
+    TProcess_Struct* process;
 };
 
 class CProcess_Manager {

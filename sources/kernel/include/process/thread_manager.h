@@ -1,6 +1,11 @@
 #pragma once
-
 #include <hal/intdef.h>
+#include <memory/kernel_heap.h>
+#include <memory/pages.h>
+#include <memory/memmap.h>
+#include <memory/mmu.h>
+#include <memory/pt_alloc.h>
+
 
 #include "process.h"
 #include "thread.h"
@@ -8,17 +13,19 @@
 #include <fs/filesystem.h>
 #include <stdstring.h>
 
+extern CThread_Manager sThread_Manager;
+
 class CThread_Manager
 {
 private:
     // zalozi prazdne vlakno (alokuje pamet)
-    TThread_Struct* Create_Thread();
+    inline TThread_Struct* Create_Thread();
 public:
-    CThread_Manager(/* args */);
+    CThread_Manager();
     ~CThread_Manager();
 
     // Vytvori prvni vlakno procesu, nahraje kod do pameti
-    TThread_Struct* Create_First_Thread(unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system);
+    TThread_Struct* Create_First_Thread(TProcess_Struct* process, unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system);
     // Vytvori vlakno dle volajiciho rodice
     TThread_Struct* Fork_Thread(TThread_Struct* parent);
     //ziska TID prave naplanovaneho vlakna (pro systemove volani )

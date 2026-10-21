@@ -126,19 +126,25 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     }
 
     // alokace pameti pro task data
-    procnode->task = sKernelMem.Alloc<TProcess_Struct>();
-    auto* task = procnode->task;
-    //nastaveni task data
-    task->pid = ++mLast_PID;
-    task->sched_static_priority = 5;    // xTODO: pro ted je to jen hardcoded hodnota, do budoucna urcite bude nutne dovolit specifikovat - by se mohlo proste predavat jako argument funkce...
+    procnode->process = sKernelMem.Alloc<TProcess_Struct>();
+    auto* process = procnode->process;
+    //nastaveni process data
+    process->pid = ++mLast_PID;
+    process->sched_static_priority = 5;    // xTODO: pro ted je to jen hardcoded hodnota, do budoucna urcite bude nutne dovolit specifikovat - by se mohlo proste predavat jako argument funkce...
     
     /* TODO: - co by se tu melo dit
         - volam zakladani prvniho threadu - asi funkce "create first thread", ktera bude volat "create thread", ktera bude volana handlerem neceho jako "pthread_create()"
         - inkrementovat pocitadlo threadu, dat do seznamu threadu prvni thread
     */
+    // nullpointery na vsechna vlakna - zakladat se da jenom tam kde je nullpointer
+    for (uint32_t i = 0; i < Max_Process_Threads; i++) {
+        process->threads[i] = nullptr;
+    } 
+    // TODO: vyresit kdo bude mit instanci koho, nebo jestli proste thread manager bude globalni staticka trida...
+    sThread_Manager.Create_First_Thread(process, elf_file_data, elf_file_length, is_system);
 
     /* TODO: tyhle veci se budou zakladat v threadu
-    - dedime od tasku
+    - dedime od processu
     - haldu resit nemusime, o tu si thread rika syscallem
     - vytvorit tabulku stranek pro process.
     - alokovat stranku pro kod a dat ho tam stejne jako ted
@@ -146,28 +152,28 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
 
 
 
-    task->sched_counter = task->sched_static_priority;
-    task->state = NTask_State::New;
-    task->deadline = Indefinite; // task si zatim nestanovil deadline, udela to az to bude aktualni v deadline syscallu
-    task->notified_deadline = Indefinite;
-    task->page_count = 0;
+    process->sched_counter = process->sched_static_priority;
+    process->state = Nprocess_State::New;
+    process->deadline = Indefinite; // process si zatim nestanovil deadline, udela to az to bude aktualni v deadline syscallu
+    process->notified_deadline = Indefinite;
+    process->page_count = 0;
     
 
     // lr = co zacit vykonavat po bootstrapu, 0x8000 je misto, kam je relokovany v kazde nasi binarce symbol _start, tedy vstupni bod programu
-    //task->cpu_context.lr = 0x8000;
+    //process->cpu_context.lr = 0x8000;
     // nyni mame ale implementovany i ELF loader, takze po nacteni ELF souboru lze vycist, kde je vlastne vstupni bod programu
 
     // pc = "aktualni" kod k provadeni, tedy bootstrap procesu v jadre - lisi se fakticky jen tim, zda je do CPSR vlozen rezim uzivatelsky nebo systemovy,
     // ale teoreticky muzeme chtit pridat jeste dalsi veci specificke pro nejaky z rezimu
-    task->cpu_context.pc = is_system ? reinterpret_cast<unsigned long>(&system_process_bootstrap) : reinterpret_cast<unsigned long>(&user_process_bootstrap);
+    process->cpu_context.pc = is_system ? reinterpret_cast<unsigned long>(&system_process_bootstrap) : reinterpret_cast<unsigned long>(&user_process_bootstrap);
     // sp = zasobnik, vzdy je relokovany na nejakou fixni pamet, pro nas je jednoduche volit ho o velikosti 1MB
     // pozn. zasobnik roste na druhou stranu, takze musime SP nastavit na konec stranky
-    task->cpu_context.sp = 0x90000000 + mem::PageSize;
+    process->cpu_context.sp = 0x90000000 + mem::PageSize;
 
     // alokujeme stranku pro kod a pro zasobnik
     uint32_t code_page_phys = static_cast<unsigned long>(sPage_Manager.Alloc_Page()) - mem::MemoryVirtualBase;
     uint32_t stack_page_phys = static_cast<unsigned long>(sPage_Manager.Alloc_Page()) - mem::MemoryVirtualBase;
-    task->page_count += 2;
+    process->page_count += 2;
     
     // alokujeme tabulku stranek procesu z poolu
     uint32_t* pt = sPT_Alloc.Alloc();
@@ -190,31 +196,28 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
         sPT_Alloc.Free(pt);
         sPage_Manager.Free_Page(code_page_phys + mem::MemoryVirtualBase);
         sPage_Manager.Free_Page(stack_page_phys + mem::MemoryVirtualBase);
-        sKernelMem.Free(procnode->task);
+        sKernelMem.Free(procnode->process);
         sKernelMem.Free(procnode);
         return Invalid_PID;
     }
 
     // nastavime PC procesu na vstupni bod programu, ktery jsme nacetli z ELF souboru
-    task->cpu_context.lr = elf_pc;
+    process->cpu_context.lr = elf_pc;
 
     // nastavime ulozene TTBR0 procesu - tady musi byt fyzicka adresa, proto odecitame bazi (vsechny fyzicke adresy jsou v kernelovem modu mapovany na "0xC0000000 + offset")
-    task->cpu_context.ttbr0 = (reinterpret_cast<unsigned long>(pt) - mem::MemoryVirtualBase)
+    process->cpu_context.ttbr0 = (reinterpret_cast<unsigned long>(pt) - mem::MemoryVirtualBase)
         | TTBR_Flags::Inner_Cacheable
         | TTBR_Flags::Shared;
     */
 
     // nullpointery na otevrene soubory
     for (uint32_t i = 0; i < Max_Process_Opened_Files; i++) {
-        task->opened_files[i] = nullptr;
+        process->opened_files[i] = nullptr;
     }
-    // nullpointery na vsechna ostatni vlakna (krome hlavniho vlakna procesu)
-    for (uint32_t i = 1; i < Max_Process_Threads; i++) {
-        task->threads[i] = nullptr;
-    }
+    
 
     
-    return task->pid;
+    return process->pid;
 }
 
 // TODO: presuneme do CScheduler, bude planovat jednotlive threads misto task/process,
