@@ -3,22 +3,19 @@
 #include <process/process_manager.h>
 
 class CScheduler {
-    private:    
+    private:
         // prave bezici vlakno
         TThread_Struct* mCurrent_Thread;
 
     private:
         void Switch_To(TThread_Struct* node);
-
-        bool Notify_Thread(TThread_Struct* thread);
-
     protected:
         // round-robin planovac (se statickou prioritou)
         TThread_Struct* Schedule_RR();
         // earliest deadline first (real-time) planovac
         TThread_Struct* Schedule_EDF();
 
-        TThread_Struct* (CProcess_Manager::*mSchedule_Fnc)() = nullptr;
+        TThread_Struct* (CScheduler::*mSchedule_Fnc)() = nullptr;
 
     public:
         CScheduler();

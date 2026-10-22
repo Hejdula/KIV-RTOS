@@ -49,26 +49,16 @@ class CProcess_Manager {
 
         // CProcess_List_Node* mCurrent_Task_Node;
         // TODO: k prave bezicimu 'tasku' se pristupovalo pomoci mCurrent_Task_Node,
-        // budou se planovat vlakna a bylo by vhodne rozdelit na mCurrent_Thread a mCurrent_Process_Node
+        // budou se planovat vlakna a bylo by vhodne rozdelit na mCurrent_Thread(ve scheduleru) a mCurrent_Process_Node
         // na mCurrent_Task_Node je aktualne 50+ referenci, tak tohle bude treba projit jedno po druhem
 
-        // uzel procesu prave beziciho vlakn
+        // uzel procesu prave beziciho vlakna
         CProcess_List_Node* mCurrent_Process_Node;
-        // prave bezici vlakno
-        TThread_Struct* mCurrent_Thread;
 
     private:
-        void Switch_To(CProcess_List_Node* node);
-
         bool Notify_Thread(TThread_Struct* thread);
 
     protected:
-        // round-robin planovac (se statickou prioritou)
-        CProcess_List_Node* Schedule_RR();
-        // earliest deadline first (real-time) planovac
-        CProcess_List_Node* Schedule_EDF();
-
-        CProcess_List_Node* (CProcess_Manager::*mSchedule_Fnc)() = nullptr;
 
     public:
         CProcess_Manager();
@@ -76,19 +66,12 @@ class CProcess_Manager {
         // vytvori proces, ktery bude vykonavat zadanou funkci, vraci jeho PID; volitelne muze jit o systemovy proces
         uint32_t Create_Process(unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system);
 
-        // metoda, kterou se explicitne spusti planovac - muze byt volana z IRQ handleru casovace, nebo treba i ze SW preruseni (kdyz se proces zablokuje)
-        void Schedule();
-
         // vrati strukturu procesu, ktery je v tento moment naplanovan
         TProcess_Struct* Get_Current_Process() const;
-
-        TThread_Struct* Get_Current_Thread() const;
 
         // vrati strukturu procesu se zadanym PID, nebo nullptr, pokud proces neexistuje
         TProcess_Struct* Get_Process_By_PID(uint32_t pid) const;
 
-        // blokuje soucasny proces (zatim v generickem stavu "Blocked"), preplanuje na jiny proces
-        void Block_Current_Thread();
         // notifikuje blokovany proces (napr. spici nad mutexem, souborem, ...)
         bool Notify_Process(uint32_t pid, IFile* notifier_file);
 
@@ -106,9 +89,6 @@ class CProcess_Manager {
         void Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target);
         // softwarova preruseni pro filesystem facility
         void Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target);
-
-        // ziska info z planovace
-        bool Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target);
 
         // zpracuje WaitAll syscall
         void Handle_WaitAll_SWI(uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result &target);
