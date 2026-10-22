@@ -56,7 +56,6 @@ class CProcess_Manager {
         CProcess_List_Node* mCurrent_Process_Node;
 
     private:
-        bool Notify_Thread(TThread_Struct* thread);
 
     protected:
 

@@ -1,4 +1,5 @@
 #include <process/thread_manager.h>
+#include <drivers/timer.h>
 
 // "importovane" funkce z asm
 extern "C" {
@@ -79,4 +80,23 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
     
 
     return process->threads[0]->tid;
+}
+
+
+bool CThread_Manager::Notify_Thread(TThread_Struct* thread) {
+    if (!thread) {
+        return false;
+    }
+
+    // ve slozitejsich planovacich by tady mohl byt treba i presun do jine fronty procesu, apod.
+    thread->state = NThread_State::Runnable;
+
+    // pokud byla nastavena "budouci" deadline, nastavime skutecnou deadline
+    if (thread->notified_deadline != Deadline_Unchanged) {
+        thread->deadline = sTimer.Get_Tick_Count() + thread->notified_deadline;
+    }
+    // pozor: tady nesmime mazat budouci deadline - co kdyby byl proces probuzen falesne? (stolen wakeup)
+    //        v kernelu by se to sice stavat uplne nemelo, ale co kdybychom se nekde upsali
+
+    return true;
 }

@@ -73,31 +73,14 @@ bool CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file) {
             if(thread->is_multi_file_wait){
                 thread->multi_wait_ready_fd = handle_index;
             }
-            notified_some |= Notify_Thread(thread);
+            notified_some |= sThread_Manager.Notify_Thread(thread);
         }
     }
 
     return notified_some;
 }
 
-// TODO: move to thread_manager
-bool CProcess_Manager::Notify_Thread(TThread_Struct* thread) {
-    if (!thread) {
-        return false;
-    }
 
-    // ve slozitejsich planovacich by tady mohl byt treba i presun do jine fronty procesu, apod.
-    thread->state = NThread_State::Runnable;
-
-    // pokud byla nastavena "budouci" deadline, nastavime skutecnou deadline
-    if (thread->notified_deadline != Deadline_Unchanged) {
-        thread->deadline = sTimer.Get_Tick_Count() + thread->notified_deadline;
-    }
-    // pozor: tady nesmime mazat budouci deadline - co kdyby byl proces probuzen falesne? (stolen wakeup)
-    //        v kernelu by se to sice stavat uplne nemelo, ale co kdybychom se nekde upsali
-
-    return true;
-}
 
 uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system) {
     CProcess_List_Node* procnode = sKernelMem.Alloc<CProcess_List_Node>();

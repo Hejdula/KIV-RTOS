@@ -42,7 +42,8 @@ public:
     uint32_t Fork_Thread(TThread_Struct* parent);
     //ziska TID prave naplanovaneho vlakna (pro systemove volani )
     uint32_t Get_Current_TID();
-
+    //prevede dany thread do runnable, nastavi notified 
+    bool Notify_Thread(TThread_Struct* thread);
 
 };
 
