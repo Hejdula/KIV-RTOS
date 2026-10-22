@@ -31,11 +31,11 @@ TProcess_Struct* CProcess_Manager::Get_Current_Process() const {
 }
 
 
-TProcess_Struct* CProcess_Manager::Get_Process_By_PID(uint32_t pid) const {
+CProcess_List_Node* CProcess_Manager::Get_Process_Node_By_PID(uint32_t pid) const {
     CProcess_List_Node* node = mProcess_List_Head;
     while (node != nullptr) {
         if (node->process->pid == pid) {
-            return node->process;
+            return node;
         }
 
         node = node->next;
@@ -44,6 +44,13 @@ TProcess_Struct* CProcess_Manager::Get_Process_By_PID(uint32_t pid) const {
     return nullptr;
 }
 
+TProcess_Struct* CProcess_Manager::Get_Process_By_PID(uint32_t pid) const {
+    CProcess_List_Node* node = Get_Process_Node_By_PID(pid);
+    if (!node) {
+        return nullptr;
+    }
+    return node->process;
+}
 
 
 bool CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file) {

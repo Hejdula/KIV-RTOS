@@ -68,6 +68,9 @@ class CProcess_Manager {
         // vrati strukturu procesu, ktery je v tento moment naplanovan
         TProcess_Struct* Get_Current_Process() const;
 
+        // vrati uzel procesu ve spojovem seznamu procesu dle PID, nebo nullptr, pokud proces neexistuje
+        CProcess_List_Node* Get_Process_Node_By_PID(uint32_t pid) const;
+        
         // vrati strukturu procesu se zadanym PID, nebo nullptr, pokud proces neexistuje
         TProcess_Struct* Get_Process_By_PID(uint32_t pid) const;
 
