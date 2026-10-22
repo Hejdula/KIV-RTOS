@@ -7,16 +7,17 @@ class CScheduler {
     private:
         // prave bezici vlakno
         TThread_Struct* mCurrent_Thread;
+        TThread_List_Node* mCurrent_Thread_Node;
 
     private:
         void Switch_To(TThread_Struct* node);
     protected:
         // round-robin planovac (se statickou prioritou)
-        TThread_Struct* Schedule_RR();
+        TThread_List_Node* Schedule_RR();
         // earliest deadline first (real-time) planovac
-        TThread_Struct* Schedule_EDF();
+        TThread_List_Node* Schedule_EDF();
 
-        TThread_Struct* (CScheduler::*mSchedule_Fnc)() = nullptr;
+        TThread_List_Node* (CScheduler::*mSchedule_Fnc)() = nullptr;
 
     public:
         CScheduler();

@@ -1,7 +1,6 @@
-
 #include <process/scheduler.h>
+#include <process/thread_manager.h>
 
-// "importovane" funkce z asm - TODO: smazat, prestehovano do thread manageru
 extern "C" {
     void context_switch(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
     void context_switch_first(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
@@ -12,14 +11,13 @@ CScheduler::CScheduler() : mCurrent_Thread(nullptr) {
     mSchedule_Fnc = &CScheduler::Schedule_EDF;
 }
 
-
-TThread_Struct* CScheduler::Schedule_RR() {
+TThread_List_Node* CScheduler::Schedule_RR() {
     // je nejaky proces naplanovany? pokud je ve stavu running, budeme snizovat citac, pokud ne, musime okamzite preplanovat
-    if (mCurrent_Task_Node && mCurrent_Task_Node->task->state == NTask_State::Running) {
+    if (mCurrent_Thread && mCurrent_Thread->state == NThread_State::Running) {
         // snizime citac planovace
-        mCurrent_Task_Node->task->sched_counter--;
+        mCurrent_Thread->sched_counter--;
         // pokud je citac vetsi nez 0, zatim nebudeme preplanovavat (a zaroven je proces stale ve stavu Running - nezablokoval se nad necim)
-        if (mCurrent_Task_Node->task->sched_counter > 0) {
+        if (mCurrent_Thread->sched_counter > 0) {
             return nullptr;
         }
     }
@@ -27,35 +25,32 @@ TThread_Struct* CScheduler::Schedule_RR() {
     // najdeme dalsi proces na planovani
 
     // vybereme dalsi proces v rade
-    CProcess_List_Node* next = mCurrent_Task_Node ? mCurrent_Task_Node->next : mProcess_List_Head;
-    if (!next) {
-        next = mProcess_List_Head;
-    }
+    TThread_List_Node* node = mCurrent_Thread_Node && mCurrent_Thread_Node->next ? mCurrent_Thread_Node->next : sThread_Manager.Get_Thread_List_Head();
 
     // proces k naplanovani musi bud byt ve stavu runnable (jiz nekdy bezel a muze bezet znovu) nebo running (pak jde o stavajici proces)
     // a nebo new (novy proces, ktery jeste nebyl planovany)
-    while (next->task->state != NTask_State::Runnable && next->task->state != NTask_State::Running && next->task->state != NTask_State::New) {
-        if (!next) {
-            next = mCurrent_Task_Node;
+    while (node->thread->state != NThread_State::Runnable && node->thread->state != NThread_State::Running && node->thread->state != NThread_State::New) {
+        if (!node->next) { // TODO: zkontrolovat protoze tady predtim byl kod if(!node) ktery zda se je chybny, ale delal to UBL, takze sanity check :)
+            node = mCurrent_Thread_Node;
             break;
         } else {
-            next = next->next;
+            node = node->next;
         }
     }
 
-    // pokud nechceme preplanovavat soucasny proces...
-    if (next == mCurrent_Task_Node) {
+    // pokud chceme preplanovavat soucasny proces...
+    if (node == mCurrent_Thread_Node) {
         // pokud by se mel preplanovat kvuli vyprseni casovych kvant...
-        if (mCurrent_Task_Node->task->sched_counter == 0) {
+        if (mCurrent_Thread_Node->thread->sched_counter == 0) {
             // nastavime mu zase zpatky jeho pridel casovych kvant a vracime se
-            mCurrent_Task_Node->task->sched_counter = mCurrent_Task_Node->task->sched_static_priority;
+            mCurrent_Thread_Node->thread->sched_counter = mCurrent_Thread_Node->thread->process->sched_static_priority;
         }
     }
 
-    return next;
+    return node;
 }
 
-TThread_Struct* CScheduler::Schedule_EDF() {
+TThread_List_Node* CScheduler::Schedule_EDF() {
     CProcess_List_Node* next = nullptr;
 
     // EDF = najdeme takovy proces, ktery je ve stavu Running nebo Runnable a ma deadline nejblizsi aktualni casove znacce
@@ -224,6 +219,6 @@ bool CScheduler::Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target) {
         default:
             return false;
     }
-
     return true;
 }
+
