@@ -1,4 +1,4 @@
-#include "thread_manager.h"
+#include <process/thread_manager.h>
 
 // "importovane" funkce z asm
 extern "C" {
@@ -32,7 +32,7 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
 
     // adpatace puvodniho kodu zakladani procesu
     // lr = co zacit vykonavat po bootstrapu, 0x8000 je misto, kam je relokovany v kazde nasi binarce symbol _start, tedy vstupni bod programu
-    process->threads[0]->cpu_context.lr = 0x8000; // TODO: zjistit proc sakra se tohle dela, vsak to o par radku niz zase prepisu tim z elf souboru
+    process->threads[0]->cpu_context.lr = 0x8000; // TODO: zjistit proc se tohle dela, vsak to o par radku niz zase prepisu tim z elf souboru
 
     // pc = "aktualni" kod k provadeni, tedy bootstrap procesu v jadre - lisi se fakticky jen tim, zda je do CPSR vlozen rezim uzivatelsky nebo systemovy,
     // ale teoreticky muzeme chtit pridat jeste dalsi veci specificke pro nejaky z rezimu
