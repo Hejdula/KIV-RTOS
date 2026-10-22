@@ -2,6 +2,7 @@
 #include <process/process_manager.h>
 #include <process/resource_manager.h>
 #include <process/elf_loader.h>
+#include <process/scheduler.h>
 #include <process/thread.h>
 
 
@@ -113,8 +114,8 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     mProcess_List_Head->prev = procnode;
     mProcess_List_Head = procnode;
 
-    if (!mCurrent_Task_Node) {
-        mCurrent_Task_Node = procnode;
+    if (!mCurrent_Process_Node) {
+        mCurrent_Process_Node = procnode;
     }
 
     // alokace pameti pro process data
@@ -277,33 +278,37 @@ void CProcess_Manager::Close_All_Files(TProcess_Struct* task) {
     }
 }
 
+// TODO: tykaji se vsechny procesu? Terminate, Get_PID se procesu tyka, ale sleep/Yield je k vlaknu
 void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target) {
 
     // TODO: signalizace chyby
-    if (!mCurrent_Task_Node) {
+    TThread_Struct* cur_thread = sScheduler.Get_Current_Thread();
+    if (!mCurrent_Process_Node || !cur_thread) {
         return;
     }
 
     switch (svc_idx) {
         case NSWI_Process_Service::Get_PID:
-            target.r0 = mCurrent_Task_Node->task->pid;
+            target.r0 = mCurrent_Process_Node->task->pid;
             break;
         case NSWI_Process_Service::Terminate:
-            mCurrent_Task_Node->task->sched_counter = 1;
-            mCurrent_Task_Node->task->state = NTask_State::Zombie;
-            mCurrent_Task_Node->task->exit_code = r0;
-            Close_All_Files(mCurrent_Task_Node->task);
-            Schedule();
+            // TODO: je treba korekne ukoncit vsechny vlakna, soubory, heap atd a nastavit process jako zombie
+            // mCurrent_Task_Node->task->sched_counter = 1;
+            // mCurrent_Task_Node->task->state = NTask_State::Zombie;
+            // mCurrent_Task_Node->task->exit_code = r0;
+            // Close_All_Files(mCurrent_Task_Node->task);
+            sScheduler.Schedule();
             break;
         case NSWI_Process_Service::Yield:
-            Schedule();
+            sScheduler.Schedule();
             break;
         case NSWI_Process_Service::Sleep:
+            
             mCurrent_Task_Node->task->sched_counter = 1;
             mCurrent_Task_Node->task->state = NTask_State::Interruptable_Sleep;
             mCurrent_Task_Node->task->notified_deadline = r1;
             mCurrent_Task_Node->task->sleep_timer =  ( (r0 == Indefinite) ? r0 : sTimer.Get_Tick_Count() + r0 );
-            Schedule();
+            sScheduler.Schedule();
             break;
         case NSWI_Process_Service::Get_Sched_Info:
             Get_Scheduler_Info(static_cast<NGet_Sched_Info_Type>(r0), reinterpret_cast<void*>(r1));
