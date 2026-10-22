@@ -2,19 +2,10 @@
 
 #include <process/process_manager.h>
 
-struct TThread_List_Node {
-    CProcess_List_Node* prev;
-    CProcess_List_Node* next;
-    TProcess_Struct* process;
-};
-
 class CScheduler {
     private:    
         // prave bezici vlakno
         TThread_Struct* mCurrent_Thread;
-
-        // pocatek listu vsech vlaken
-        TThread_List_Node* mThread_list_head;
 
     private:
         void Switch_To(TThread_Struct* node);

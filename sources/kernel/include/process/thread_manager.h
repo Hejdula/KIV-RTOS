@@ -14,6 +14,13 @@
 #include <fs/filesystem.h>
 #include <stdstring.h>
 
+
+struct TThread_List_Node {
+    TThread_List_Node* prev;
+    TThread_List_Node* next;
+    TProcess_Struct* process;
+};
+
 class CThread_Manager;
 
 extern CThread_Manager sThread_Manager;
@@ -22,6 +29,7 @@ constexpr uint32_t Invalid_TID = static_cast<uint32_t>(-1);
 class CThread_Manager
 {
 private:
+    TThread_List_Node* mThread_List_head;    
     // zalozi prazdne vlakno (alokuje pamet)
     inline TThread_Struct* Create_Thread();
 public:

@@ -48,7 +48,7 @@ class CProcess_Manager {
         CProcess_List_Node* mProcess_List_Head;
 
         // CProcess_List_Node* mCurrent_Task_Node;
-        // TODO: k prave bezicimu 'tasku' pristupovalo pomoci mCurrent_Task_Node,
+        // TODO: k prave bezicimu 'tasku' se pristupovalo pomoci mCurrent_Task_Node,
         // budou se planovat vlakna a bylo by vhodne rozdelit na mCurrent_Thread a mCurrent_Process_Node
         // na mCurrent_Task_Node je aktualne 50+ referenci, tak tohle bude treba projit jedno po druhem
 
