@@ -239,6 +239,7 @@ bool CProcess_Manager::Unmap_File_Current(uint32_t handle) {
     // Nebo spise kazde vlakno ma svou bitmap s otevrenymi files a soubor ho 
     // zavre jen kdyz uz zadne z vlaken nema soubor otevreny a pak by se tohle muselo 
     // o level vyse v Handle_xxx_SWI
+
     return true;
 }
 
@@ -255,7 +256,10 @@ void CProcess_Manager::Close_All_Files(TProcess_Struct* task) {
     }
 }
 
-// TODO: tykaji se vsechny procesu? Terminate, Get_PID se procesu tyka, ale sleep/Yield je k vlaknu
+// TODO: tykaji se vsechny procesu? Terminate, Get_PID se procesu tyka, ale sleep/Yield je k vlaknu - Hejdula
+// ANSWER: Terminate zabije proces ale z POV vlakna, GETPID muze udelat kazdy vlakno samo o sobe, za me tohle vsechno patri do thread - Adam
+// TODO: pridat exit_thread
+
 void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target) {
 
     // TODO: signalizace chyby
@@ -307,6 +311,8 @@ void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t
         }
     }
 }
+
+
 
 void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target) {
 
@@ -483,7 +489,7 @@ uint32_t CProcess_Manager::Get_Page_Count() {
     CProcess_List_Node* node = mProcess_List_Head;
     uint32_t c = 0;
     while (node != nullptr) {
-        c += node->task->page_count;
+        c += node->process->page_count;
         node = node->next;
     }
 
@@ -495,7 +501,7 @@ uint32_t CProcess_Manager::Get_File_Count() {
     uint32_t c = 0;
     while (node != nullptr) {
         for (int i = 0; i < Max_Process_Opened_Files; i++) {
-            if (node->task->opened_files[i] != nullptr) c++;
+            if (node->process->opened_files[i] != nullptr) c++;
         }
         node = node->next;
     }
