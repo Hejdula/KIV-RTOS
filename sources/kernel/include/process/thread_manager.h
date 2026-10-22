@@ -18,7 +18,7 @@
 struct TThread_List_Node {
     TThread_List_Node* prev;
     TThread_List_Node* next;
-    TProcess_Struct* process;
+    TThread_Struct* thread;
 };
 
 class CThread_Manager;
@@ -29,12 +29,12 @@ constexpr uint32_t Invalid_TID = static_cast<uint32_t>(-1);
 class CThread_Manager
 {
 private:
-    TThread_List_Node* mThread_List_head;    
+    TThread_List_Node* mThread_List_Head;    
     // zalozi prazdne vlakno (alokuje pamet)
     inline TThread_Struct* Create_Thread();
 public:
     CThread_Manager() = default;
-    ~CThread_Manager() = default;
+    ~CThread_Manager() = default; 
 
     // Vytvori prvni vlakno procesu, nahraje kod do pameti
     uint32_t Create_First_Thread(TProcess_Struct* process, unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system);
@@ -43,7 +43,9 @@ public:
     //ziska TID prave naplanovaneho vlakna (pro systemove volani )
     uint32_t Get_Current_TID();
     //prevede dany thread do runnable, nastavi notified 
-    bool Notify_Thread(TThread_Struct* thread);
+    bool Notify_Thread(TThread_Struct* thread);    
+    TThread_List_Node* Get_Thread_List_Head();
+
 
 };
 
