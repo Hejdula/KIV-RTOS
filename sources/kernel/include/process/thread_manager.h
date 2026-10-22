@@ -14,6 +14,8 @@
 #include <fs/filesystem.h>
 #include <stdstring.h>
 
+class CThread_Manager;
+
 extern CThread_Manager sThread_Manager;
 constexpr uint32_t Invalid_TID = static_cast<uint32_t>(-1);
 

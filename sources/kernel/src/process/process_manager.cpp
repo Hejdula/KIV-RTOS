@@ -55,11 +55,10 @@ TProcess_Struct* CProcess_Manager::Get_Process_By_PID(uint32_t pid) const {
 }
 
 
-// TODO: v budoucnu budeme blokovat vlakno, prejmenuje se na Block_Current_Thread
 void CProcess_Manager::Block_Current_Thread() {
-    TProcess_Struct* cur = Get_Current_Process();
+    TThread_Struct* cur = Get_Current_Thread();
 
-    cur->state = NTask_State::Blocked;
+    cur->state = NThread_State::Blocked;
 
     // xTODO: doopravdy to takto chceme?
     //if (cur->notified_deadline != Deadline_Unchanged)
