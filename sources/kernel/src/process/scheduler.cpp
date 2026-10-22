@@ -1,7 +1,11 @@
-#include <process/process_manager.h>
+
 #include <process/scheduler.h>
 
-
+// "importovane" funkce z asm - TODO: smazat, prestehovano do thread manageru
+extern "C" {
+    void context_switch(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
+    void context_switch_first(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
+};
 
 CScheduler::CScheduler() : mCurrent_Thread(nullptr) {
     //mSchedule_Fnc = &CScheduler::Schedule_RR;

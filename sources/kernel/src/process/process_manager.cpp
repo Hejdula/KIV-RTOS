@@ -17,13 +17,7 @@
 #include <drivers/uart.h>
 #include <drivers/timer.h>
 
-// "importovane" funkce z asm - TODO: smazat, prestehovano do thread manageru
-extern "C" {
-    void user_process_bootstrap();
-    void system_process_bootstrap();
-    void context_switch(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
-    void context_switch_first(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
-};
+
 
 CProcess_Manager sProcessMgr;
 CThread_Manager sThreadMgr;

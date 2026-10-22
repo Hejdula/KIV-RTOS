@@ -4,8 +4,6 @@
 extern "C" {
     void user_process_bootstrap();
     void system_process_bootstrap();
-    void context_switch(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
-    void context_switch_first(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
 };
 
 inline TThread_Struct *CThread_Manager::Create_Thread()
