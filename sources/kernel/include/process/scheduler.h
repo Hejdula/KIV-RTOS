@@ -10,7 +10,7 @@ class CScheduler {
         TThread_List_Node* mCurrent_Thread_Node;
 
     private:
-        void Switch_To(TThread_Struct* node);
+        void Switch_To(TThread_List_Node* node);
     protected:
         // round-robin planovac (se statickou prioritou)
         TThread_List_Node* Schedule_RR();
