@@ -103,18 +103,15 @@ void CScheduler::Block_Current_Thread() {
     Schedule();
 }
 
-// TODO: bude planovat jednotlive threads misto task/process,
-// thread pak potrebuje mit svou deadline dle ktere se bude planovat
 void CScheduler::Schedule() {
 
     // projdeme vsechny uspane (sleep) procesy, zda je na case je vzbudit
     {
         TThread_List_Node* node = sThread_Manager.Get_Thread_List_Head();
         while (node) {
-            if (node->task->state == NTask_State::Interruptable_Sleep) {
-                if (node->task->sleep_timer != Indefinite && node->task->sleep_timer <= sTimer.Get_Tick_Count()) {
-                    Notify_Thread(node->task); // TODO: je treba prochazet/planovat vlakna misto procesu
-                }
+            if (node->thread->state == NThread_State::Interruptable_Sleep) {
+                if (node->thread->sleep_timer != Indefinite && node->thread->sleep_timer <= sTimer.Get_Tick_Count()) {
+                    sThread_Manager.Notify_Thread(node->thread);                }
             }
 
             node = node->next;
