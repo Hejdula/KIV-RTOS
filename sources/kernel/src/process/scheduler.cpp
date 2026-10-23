@@ -1,3 +1,4 @@
+#include "drivers/timer.h"
 #include <process/scheduler.h>
 #include <process/thread_manager.h>
 
@@ -102,7 +103,7 @@ void CScheduler::Block_Current_Thread() {
     Schedule();
 }
 
-// TODO: presuneme do CScheduler, bude planovat jednotlive threads misto task/process,
+// TODO: bude planovat jednotlive threads misto task/process,
 // thread pak potrebuje mit svou deadline dle ktere se bude planovat
 void CScheduler::Schedule() {
 
@@ -121,7 +122,7 @@ void CScheduler::Schedule() {
     }
 
     // invokujeme skutecny planovac
-    CProcess_List_Node* next = (this->*mSchedule_Fnc)();
+    TThread_List_Node* next = (this->*mSchedule_Fnc)();
     if (!next) {
         return;
     }
@@ -130,36 +131,37 @@ void CScheduler::Schedule() {
     // ale kdyby k tomu doslo, obtizne by se to diagnostikovalo
 
     // planovac usoudil, ze ma byt naplanovany proces, ktery zrovna ma CPU pro sebe - nemusime nic menit
-    if (next == mCurrent_Task_Node) {
+    if (next == mCurrent_Thread_Node) {
         return;
     }
 
     Switch_To(next);
 }
 
-void CScheduler::Switch_To(CProcess_List_Node* node) {
+void CScheduler::Switch_To(TThread_List_Node* node) {
     // pokud je stavajici proces ve stavu Running (muze teoreticky byt jeste Blocked), vratime ho do stavu Runnable
     // Blocked prehazovat nebudeme ze zjevnych duvodu
-    if (mCurrent_Task_Node->task->state == NTask_State::Running) {
-        mCurrent_Task_Node->task->state = NTask_State::Runnable;
+    if (mCurrent_Thread->state == NThread_State::Running) {
+        mCurrent_Thread->state = NThread_State::Runnable;
     }
 
     // projistotu vynulujeme prideleny pocet casovych kvant
-    mCurrent_Task_Node->task->sched_counter = 0;
+    mCurrent_Thread->sched_counter = 0;
 
-    TCPU_Context* old = &mCurrent_Task_Node->task->cpu_context;
-    bool is_first_time = (node->task->state == NTask_State::New);
+    TCPU_Context* old = &mCurrent_Thread->cpu_context;
+    bool is_first_time = (mCurrent_Thread->state == NThread_State::New);
 
     // prehodime na novy proces, pridelime casova kvanta a nastavime proces do stavu Running
-    mCurrent_Task_Node = node;
-    mCurrent_Task_Node->task->sched_counter = mCurrent_Task_Node->task->sched_static_priority;
-    mCurrent_Task_Node->task->state = NTask_State::Running;
+    mCurrent_Thread = node->thread;
+    mCurrent_Thread_Node = node;
+    mCurrent_Thread->sched_counter = mCurrent_Thread->process->sched_static_priority;
+    mCurrent_Thread->state = NThread_State::Running;
 
     // pokud je to poprve, co je proces planovany, musime to vzit jeste pres malou odbocku ("bootstrap")
     if (is_first_time) {
-        context_switch_first(&node->task->cpu_context, old);
+        context_switch_first(&node->thread->cpu_context, old);
     } else {
-        context_switch(&node->task->cpu_context, old);
+        context_switch(&node->thread->cpu_context, old);
     }
 }
 
@@ -170,10 +172,10 @@ bool CScheduler::Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target) {
 
     switch (type) {
         case NGet_Sched_Info_Type::Active_Process_Count: {
-            CProcess_List_Node* node = mProcess_List_Head;
+            TThread_List_Node* node = sThread_Manager.Get_Thread_List_Head();
             uint32_t procCnt = 0;
             while (node) {
-                if (node->task->state == NTask_State::Running || node->task->state == NTask_State::Runnable) {
+                if (node->thread->state == NThread_State::Running || node->thread->state == NThread_State::Runnable) {
                     procCnt++;
                 }
 
@@ -188,23 +190,24 @@ bool CScheduler::Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target) {
             break;
         }
         case NGet_Sched_Info_Type::Process_Summary: {
-            CProcess_List_Node* node = mProcess_List_Head;
+            // TODO: predelat aby to odpovidalo bud process summary, nebo rename na thread summary
+            TThread_List_Node* node = sThread_Manager.Get_Thread_List_Head();
             uint32_t procCnt = 0;
 
             CProcess_Summary_Info *sum = reinterpret_cast<CProcess_Summary_Info*>(target);
             bzero(sum, sizeof(CProcess_Summary_Info));
 
             while (node) {
-                switch (node->task->state) {
-                    case NTask_State::Running:
-                    case NTask_State::Runnable:
+                switch (node->thread->state) {
+                    case NThread_State::Running:
+                    case NThread_State::Runnable:
                         sum->running++;
                         break;
-                    case NTask_State::Blocked:
-                    case NTask_State::Interruptable_Sleep:
+                    case NThread_State::Blocked:
+                    case NThread_State::Interruptable_Sleep:
                         sum->blocked++;
                         break;
-                    case NTask_State::Zombie:
+                    case NThread_State::Zombie:
                         sum->zombie++;
                         break;
                     default:
