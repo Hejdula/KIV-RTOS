@@ -30,7 +30,7 @@ TThread_List_Node* CScheduler::Schedule_RR() {
     // proces k naplanovani musi bud byt ve stavu runnable (jiz nekdy bezel a muze bezet znovu) nebo running (pak jde o stavajici proces)
     // a nebo new (novy proces, ktery jeste nebyl planovany)
     while (node->thread->state != NThread_State::Runnable && node->thread->state != NThread_State::Running && node->thread->state != NThread_State::New) {
-        if (!node->next) { // TODO: zkontrolovat protoze tady predtim byl kod if(!node) ktery zda se je chybny, ale delal to UBL, takze sanity check :)
+        if (!node->next) { 
             node = mCurrent_Thread_Node;
             break;
         } else {
@@ -51,14 +51,14 @@ TThread_List_Node* CScheduler::Schedule_RR() {
 }
 
 TThread_List_Node* CScheduler::Schedule_EDF() {
-    CProcess_List_Node* next = nullptr;
+    TThread_List_Node* next = nullptr;
 
     // EDF = najdeme takovy proces, ktery je ve stavu Running nebo Runnable a ma deadline nejblizsi aktualni casove znacce
 
-    CProcess_List_Node* itr = mProcess_List_Head;
+    TThread_List_Node* itr = mCurrent_Thread_Node;
     while (itr) {
         // potrebujeme, aby proces byl planovatelny (novy, bezici nebo runnable)
-        if (itr->task->state != NTask_State::New && itr->task->state != NTask_State::Runnable && itr->task->state != NTask_State::Running) {
+        if (itr->thread->state != NThread_State::New && itr->thread->state != NThread_State::Runnable && itr->thread->state != NThread_State::Running) {
             itr = itr->next;
             continue;
         }
@@ -67,10 +67,10 @@ TThread_List_Node* CScheduler::Schedule_EDF() {
         if (!next) {
             next = itr;
         // pokud tento proces ma deadline...
-        } else if (itr->task->deadline != Indefinite) {
+        } else if (itr->thread->deadline != Indefinite) {
             // vybereme ho jen pokud je deadline drivejsi, nez aktualne vybraneho procesu
             // TODO: preteceni uint32_t
-            if (next->task->deadline > itr->task->deadline) {
+            if (next->thread->deadline > itr->thread->deadline) {
                 next = itr;
             }
         }
@@ -79,7 +79,7 @@ TThread_List_Node* CScheduler::Schedule_EDF() {
     }
 
     // pokud zadny planovatelny proces nema nastavenou deadline, degradujeme na round-robin planovani
-    if (next && next->task->deadline == Indefinite) {
+    if (next && next->thread->deadline == Indefinite) {
         return Schedule_RR();
     }
 
