@@ -109,7 +109,7 @@ void CScheduler::Schedule() {
 
     // projdeme vsechny uspane (sleep) procesy, zda je na case je vzbudit
     {
-        CProcess_List_Node* node = mProcess_List_Head;
+        TThread_List_Node* node = sThread_Manager.Get_Thread_List_Head();
         while (node) {
             if (node->task->state == NTask_State::Interruptable_Sleep) {
                 if (node->task->sleep_timer != Indefinite && node->task->sleep_timer <= sTimer.Get_Tick_Count()) {
