@@ -169,9 +169,21 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
         
 
         case NSWI_Thread_Service::Join: 
+            
+
             break;
 
         case NSWI_Thread_Service::Exit_Thread: 
+            cur_thread->state = NThread_State::Zombie; // deklarujeme ze je zombie 
+            cur_thread->exit_code = r0; // natavime exit code
+
+            for (TThread_Struct* thread : cur_thread->process->threads) { //projedeme vsechny vlakna, ktera jsou zablokovana nad "my.join()"
+                if (thread->state == NThread_State::Blocked_on_Join && thread->blocked_on_tid == cur_thread->tid) {
+                    thread->state = NThread_State::Runnable; // a odblokujeme je
+                }
+            }
+            sScheduler.Schedule();
+
             break;
         
     }

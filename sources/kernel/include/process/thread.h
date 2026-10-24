@@ -12,6 +12,7 @@ enum class NThread_State {
                         // pro prakticke ucely se stav "Blokovane" deli jeste na podstavy, aby bylo jasne, na jaky prostredek se ceka (mutex, cteni z disku, jine I/O, ...)
     Interruptable_Sleep,// uspane vlakno - ceka az vyprsi nejaky casovy interval, popr. pokud ceka na podminkove promenne, tak ho muze probudit jeste notifikace
     Zombie,             // vlakno je ukonceno a ceka na to, az si nekdo precte jeho navratovy kod
+    Blocked_on_Join,    // vlakno zavolalo join na jine vlakno a ceka nez dane vlakno dokonci praci a ukonci se
 };
 
 #pragma pack(push, 1)
@@ -41,4 +42,5 @@ struct TThread_Struct {
                                                 // maximalni podporovany rozsah cekani je 0x7FFFFFFF, jelikoz muze citac pretect; diference je vzdy pocitana i s moznosti preteceni
     uint32_t deadline;                          // soucasny deadline dokonceni tasku
     uint32_t notified_deadline;                 // deadline nastavena po nasledujicim probuzeni vlakna (kolik casu ma vlakno po probuzeni po cekani na neco)
+    unsigned int blocked_on_tid;                // TID vlakna, na ktere ceka behem joinu na 
 };

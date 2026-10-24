@@ -268,12 +268,10 @@ void CProcess_Manager::Close_All_Files(TProcess_Struct* process) {
     if (!process) {
         return;
     }
-
-
     for (uint32_t i = 0; i < Max_Process_Opened_Files; i++) {
         if (process->opened_files[i]) {
             process->opened_files[i]->Close();
-            Notify_Process(current->pid, current->opened_files[handle]);
+            Notify_Process(process->pid, process->opened_files[i]); // notifikujeme vsechna vlakna v procesu ze dany soubor byl zavren
             process->opened_files[i] = nullptr;
         }
     }
