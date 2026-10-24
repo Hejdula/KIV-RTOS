@@ -11,6 +11,7 @@
 #include "process.h"
 #include "thread.h"
 #include "swi.h"
+#include "scheduler.h"
 #include <fs/filesystem.h>
 #include <stdstring.h>
 
@@ -35,6 +36,7 @@ private:
 public:
     CThread_Manager() = default;
     ~CThread_Manager() = default; 
+    // TODO: tady uklidit
 
     // Vytvori prvni vlakno procesu, nahraje kod do pameti
     uint32_t Create_First_Thread(TProcess_Struct* process, unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system);
@@ -43,9 +45,12 @@ public:
     //ziska TID prave naplanovaneho vlakna (pro systemove volani )
     uint32_t Get_Current_TID();
     //prevede dany thread do runnable, nastavi notified 
-    bool Notify_Thread(TThread_Struct* thread);    
+    bool Notify_Thread(TThread_Struct* thread);  
+
     TThread_List_Node* Get_Thread_List_Head();
 
+    // softwarova preruseni pro process facility
+    void Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target);
 
 };
 

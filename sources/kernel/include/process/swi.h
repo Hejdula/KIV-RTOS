@@ -24,7 +24,7 @@ enum class NSWI_Facility {
 
 // zbyva dolnich 6 bitu, tzn. 2^6 (64) moznych sluzeb v ramci faciity
 
-enum class NSWI_Process_Service {
+enum class NSWI_Thread_Service {
     // Vraci PID procesu
     // IN:  -
     // OUT: r0 = PID procesu
@@ -35,12 +35,12 @@ enum class NSWI_Process_Service {
     // OUT: -
     Terminate       = 1,
 
-    // Preda zbytek prideleneho casoveho kvanta jinemu tasku
+    // Preda zbytek prideleneho casoveho kvanta jinemu vlaknu
     // IN:  -
     // OUT: -
     Yield           = 2,
 
-    // Uspi proces na dobu (ne)urcitou
+    // Uspi vlakno na dobu (ne)urcitou
     // IN:  r0 = pocet tiku casovace, na kolik uspat proces, r1 = nova deadline po probuzeni (nebo Deadline_Unchanged pokud se nema menit, nebo Indefinite pokud se ma zrusit)
     // OUT: r0 = indikator uspechu (NSWI_Result_Code), OK pokud se probudil po casovem useku, Fail pokud ho probudilo neco jineho
     Sleep           = 3,
@@ -50,10 +50,31 @@ enum class NSWI_Process_Service {
     // OUT: - (naplnena prepravka v r1)
     Get_Sched_Info  = 4,
 
-    // Nastavi deadline splneni tasku
+    // Nastavi deadline splneni vlakna
     // IN:  r0 = subservice (NDeadline_Subservice), r1 = ukazatel na prepravku dle druhu pozadavku
     // OUT: r0 = infikator uspechu (NSWI_Result_Code)
     Deadline        = 5,
+
+    // Vraci TID vlakna
+    // IN:  -
+    // OUT: r0 = TID procesu
+    Get_TID         = 6,
+
+    // Vytvori nove vlakno, vraci jeho TID
+    // IN: r0 = adresa funkce, ktera se ma vykonavat
+    // OUT: r0 = TID noveho vlakna
+    Thread          = 7,
+
+    // Vraci return kod vlakna
+    // IN:  r0 = TID vlakna, ktere chceme joinnout
+    // OUT: r0 = return value
+    Join         = 8,
+
+    // Ukonci vlakno s danym navratovym kodem
+    // IN:  r0 = return value
+    // OUT: -
+    Exit_Thread         = 9,
+
 };
 
 enum class NSWI_Filesystem_Service {

@@ -100,3 +100,80 @@ bool CThread_Manager::Notify_Thread(TThread_Struct* thread) {
 
     return true;
 }
+
+// TODO: tykaji se vsechny procesu? Terminate, Get_PID se procesu tyka, ale sleep/Yield je k vlaknu - Hejdula
+// ANSWER: Terminate zabije proces ale z POV vlakna, GETPID muze udelat kazdy vlakno samo o sobe, za me tohle vsechno patri do thread - Adam
+// TODO: pridat exit_thread, pridat join
+
+void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result &target)
+{
+    // TODO: signalizace chyby
+    TThread_Struct* cur_thread = sScheduler.Get_Current_Thread();
+    if (!cur_thread) {
+        return;
+    }
+
+    switch (svc_idx) {
+        case NSWI_Thread_Service::Get_PID:
+            target.r0 = cur_thread->process->pid;
+            break;
+
+        case NSWI_Thread_Service::Get_TID:
+            target.r0 = cur_thread->tid;
+            break;    
+
+        case NSWI_Thread_Service::Terminate:
+            // TODO: je treba korekne ukoncit vsechny vlakna, soubory, heap atd a nastavit process jako zombie
+            // mCurrent_Task_Node->task->sched_counter = 1;
+            // mCurrent_Task_Node->task->state = NTask_State::Zombie;
+            // mCurrent_Task_Node->task->exit_code = r0;
+            // Close_All_Files(mCurrent_Task_Node->task);
+            sScheduler.Schedule();
+            break;
+
+        case NSWI_Thread_Service::Yield:
+            sScheduler.Schedule();
+            break;
+
+        case NSWI_Thread_Service::Sleep:
+            cur_thread->sched_counter = 1;
+            cur_thread->state = NThread_State::Interruptable_Sleep;
+            cur_thread->notified_deadline = r1;
+            cur_thread->sleep_timer =  ( (r0 == Indefinite) ? r0 : sTimer.Get_Tick_Count() + r0 );
+            sScheduler.Schedule();
+            break;
+
+        case NSWI_Thread_Service::Get_Sched_Info:
+            sScheduler.Get_Scheduler_Info(static_cast<NGet_Sched_Info_Type>(r0), reinterpret_cast<void*>(r1));
+            break;
+
+        case NSWI_Thread_Service::Deadline: {
+            NDeadline_Subservice dtype = static_cast<NDeadline_Subservice>(r0);
+            uint32_t* r1ptr = reinterpret_cast<uint32_t*>(r1);
+            switch (dtype) {
+                case NDeadline_Subservice::Set_Relative:
+                    cur_thread->deadline = ((*r1ptr == Indefinite) ? Indefinite : (sTimer.Get_Tick_Count() + *r1ptr));
+                    cur_thread->notified_deadline = Indefinite;
+                    break;
+                case NDeadline_Subservice::Get_Remaining:
+                    // dTODO: co kdybychom prosvihli deadline?
+                    *r1ptr = (cur_thread->deadline == Indefinite) ? Indefinite : cur_thread->deadline - sTimer.Get_Tick_Count();
+                    break;
+            }
+            break;
+        }
+        
+        // TODO: implementovat
+        case NSWI_Thread_Service::Thread: 
+            break;
+        
+
+        case NSWI_Thread_Service::Join: 
+            break;
+
+        case NSWI_Thread_Service::Exit_Thread: 
+            break;
+        
+    }
+}
+

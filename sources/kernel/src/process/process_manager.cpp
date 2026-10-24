@@ -264,77 +264,25 @@ bool CProcess_Manager::Unmap_File_Current(uint32_t handle) {
     return true;
 }
 
-void CProcess_Manager::Close_All_Files(TProcess_Struct* task) {
-    if (!task) {
+void CProcess_Manager::Close_All_Files(TProcess_Struct* process) {
+    if (!process) {
         return;
     }
+
 
     for (uint32_t i = 0; i < Max_Process_Opened_Files; i++) {
-        if (task->opened_files[i]) {
-            task->opened_files[i]->Close();
-            task->opened_files[i] = nullptr;
-        }
-    }
-}
-
-// TODO: tykaji se vsechny procesu? Terminate, Get_PID se procesu tyka, ale sleep/Yield je k vlaknu - Hejdula
-// ANSWER: Terminate zabije proces ale z POV vlakna, GETPID muze udelat kazdy vlakno samo o sobe, za me tohle vsechno patri do thread - Adam
-// TODO: pridat exit_thread
-
-void CProcess_Manager::Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target) {
-
-    // TODO: signalizace chyby
-    TThread_Struct* cur_thread = sScheduler.Get_Current_Thread();
-    if (!mCurrent_Process_Node || !cur_thread) {
-        return;
-    }
-
-    switch (svc_idx) {
-        case NSWI_Process_Service::Get_PID:
-            target.r0 = mCurrent_Process_Node->task->pid;
-            break;
-        case NSWI_Process_Service::Terminate:
-            // TODO: je treba korekne ukoncit vsechny vlakna, soubory, heap atd a nastavit process jako zombie
-            // mCurrent_Task_Node->task->sched_counter = 1;
-            // mCurrent_Task_Node->task->state = NTask_State::Zombie;
-            // mCurrent_Task_Node->task->exit_code = r0;
-            // Close_All_Files(mCurrent_Task_Node->task);
-            sScheduler.Schedule();
-            break;
-        case NSWI_Process_Service::Yield:
-            sScheduler.Schedule();
-            break;
-        case NSWI_Process_Service::Sleep:
-            
-            mCurrent_Task_Node->task->sched_counter = 1;
-            mCurrent_Task_Node->task->state = NTask_State::Interruptable_Sleep;
-            mCurrent_Task_Node->task->notified_deadline = r1;
-            mCurrent_Task_Node->task->sleep_timer =  ( (r0 == Indefinite) ? r0 : sTimer.Get_Tick_Count() + r0 );
-            sScheduler.Schedule();
-            break;
-        case NSWI_Process_Service::Get_Sched_Info:
-            Get_Scheduler_Info(static_cast<NGet_Sched_Info_Type>(r0), reinterpret_cast<void*>(r1));
-            break;
-        case NSWI_Process_Service::Deadline: {
-            NDeadline_Subservice dtype = static_cast<NDeadline_Subservice>(r0);
-            uint32_t* r1ptr = reinterpret_cast<uint32_t*>(r1);
-            switch (dtype) {
-                case NDeadline_Subservice::Set_Relative:
-                    mCurrent_Task_Node->task->deadline = ((*r1ptr == Indefinite) ? Indefinite : (sTimer.Get_Tick_Count() + *r1ptr));
-                    mCurrent_Task_Node->task->notified_deadline = Indefinite;
-                    break;
-                case NDeadline_Subservice::Get_Remaining:
-                    // TODO: co kdybychom prosvihli deadline?
-                    *r1ptr = (mCurrent_Task_Node->task->deadline == Indefinite) ? Indefinite : mCurrent_Task_Node->task->deadline - sTimer.Get_Tick_Count();
-                    break;
-            }
-            break;
+        if (process->opened_files[i]) {
+            process->opened_files[i]->Close();
+            Notify_Process(current->pid, current->opened_files[handle]);
+            process->opened_files[i] = nullptr;
         }
     }
 }
 
 
 
+
+// TODO: kam sakra patri tohle
 void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target) {
 
     // TODO: signalizace chyby
@@ -505,6 +453,7 @@ void CProcess_Manager::Handle_WaitAll_SWI(uint32_t r0, uint32_t r1, uint32_t r2,
     // v tento moment uz lze "budouci" deadline vymazat, uz je nastavena ve skutecne deadline bud shora nebo z notify kodu
     task->notified_deadline = Deadline_Unchanged;
 }
+
 
 uint32_t CProcess_Manager::Get_Page_Count() {
     CProcess_List_Node* node = mProcess_List_Head;

@@ -87,8 +87,7 @@ class CProcess_Manager {
         // zavre vsechny soubory procesu
         void Close_All_Files(TProcess_Struct* task);
 
-        // softwarova preruseni pro process facility
-        void Handle_Process_SWI(NSWI_Process_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target);
+        
         // softwarova preruseni pro filesystem facility
         void Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target);
 
