@@ -28,6 +28,7 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
     process->threads[0]->is_multi_file_wait = false;
     process->threads[0]->deadline = Indefinite;
     process->threads[0]->notified_deadline = Indefinite;
+    process->threads[0]->blocked_on_tid = Invalid_TID;
 
     // adpatace puvodniho kodu zakladani procesu
     // lr = co zacit vykonavat po bootstrapu, 0x8000 je misto, kam je relokovany v kazde nasi binarce symbol _start, tedy vstupni bod programu
@@ -168,14 +169,40 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             break;
         
 
-        case NSWI_Thread_Service::Join: 
-            
+        case NSWI_Thread_Service::Join: {
+            auto* target = cur_thread->process->threads[r0]; // vyzvedneme si ukazatel na vlakno, ktere joinujeme
+
+            if (target->state != NThread_State::Zombie) { // pokud dane vlakno jeste nedobehlo
+                cur_thread->state = NThread_State::Blocked_on_Join; // tak se zablokujeme
+                cur_thread->blocked_on_tid = target->tid; // a ulozime, na kom jsme se zablokovali
+                sScheduler.Schedule();
+            }
+
+            // ted uz vlakno zombie urcite je
+            cur_thread->blocked_on_tid = Invalid_TID; // takze nastavime ze na nikoho necekame
+            r0 = target->exit_code;
+
+            bool others_waiting = false;
+            for (TThread_Struct* thread : cur_thread->process->threads) { //projedeme vsechny vlakna, ktera jsou odblokovana nad timto vlaknem, ale jeste si nevyzvedla navratovou hodnotu
+                if (thread->state == NThread_State::Runnable && thread->blocked_on_tid == target->tid) { //
+                    others_waiting = true; // pokud nekdo takovy je, tak nebudeme delat cleanup
+                    break;
+                }
+            }
+            if(!others_waiting) { // pokud jsme posledni, kdo si vybira navratovou hodnotu, tak uklidime TCB
+            // TODO: dealokace TCB pokud jsme posledni, kdo si vybira exit_code
+            cur_thread->process->threads[target->tid] = nullptr; // a nastavime v procesu ze dany handle je volny - TODO: tohle mozna bude v thread_manageru
+            cur_thread->process->thread_count--;
+            }
 
             break;
+        }
 
         case NSWI_Thread_Service::Exit_Thread: 
             cur_thread->state = NThread_State::Zombie; // deklarujeme ze je zombie 
             cur_thread->exit_code = r0; // natavime exit code
+
+            // TODO: dealokace stacku
 
             for (TThread_Struct* thread : cur_thread->process->threads) { //projedeme vsechny vlakna, ktera jsou zablokovana nad "my.join()"
                 if (thread->state == NThread_State::Blocked_on_Join && thread->blocked_on_tid == cur_thread->tid) {
