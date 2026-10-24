@@ -214,11 +214,20 @@ uint32_t CProcess_Manager::Map_File_To_Current(IFile* file) {
     }
 
     // najdeme volny slot, pokud je
-    for (uint32_t i = 0; i < Max_Process_Opened_Files; i++) {
-        // volny slot - namapujeme soubor a vracime handle (index do tabulky)
-        if (current->opened_files[i] == nullptr) {
-            current->opened_files[i] = file;
-            return i;
+    bool slot_in_use_by_waiting_thread = false; // jestli nad vybranym prazdnym file handlem nekdo ceka
+    for (uint32_t i = 0; i < Max_Process_Opened_Files; i++) { // kontrolujeme vsechny volne sloty
+        if (current->opened_files[i] == nullptr) { // pokud je volny slot
+            for (TThread_Struct* thread : current->threads) { // tak musime u vsech vlaken zkontrolovat jestli nad nim necekaji (koncept dead-wait)
+                if (thread->fd_bitmap & 1 << i) {
+                    slot_in_use_by_waiting_thread = true;
+                    break;
+                }
+            }
+            if (!slot_in_use_by_waiting_thread) { // pokud nad timhle slotem nikdo neceka, tak ho muzeme pouzit
+                current->opened_files[i] = file;
+                return i;
+            }
+            slot_in_use_by_waiting_thread = false; // pokud nad nim nekdo ceka tak vyresetujeme promennou a jdeme na dalsi file handle 
         }
     }
 
@@ -235,9 +244,12 @@ bool CProcess_Manager::Unmap_File_Current(uint32_t handle) {
     if (!current->opened_files[handle]) {
         return false;
     }
-
-    current->opened_files[handle] = nullptr;
-    // TODO: bude treba resit kdyz ruzne threads na soubor cekaji,
+    // posleme vsem vlaknum co na odmapovavany proces cekaji notify, aby se vzbudili (read jim vrati neplatnou hodnotu)
+    Notify_Process(current->pid, current->opened_files[handle]); //navratovou hodnotu nepotrebujeme
+    current->opened_files[handle] = nullptr; // a pak muzeme soubor odmapovat
+    
+    // reseni implementovano
+    // xTODO: bude treba resit kdyz ruzne threads na soubor cekaji,
     // ted se tohle stalo jen kdyz proces bezel a zavolal close, 
     // handle se invalidovalo a pak uz nemohl nad nim cekat, ale ted muze close
     // zavolat jakekoli vlakno a tim padem ostatni kdo cekaji se musi vzbudit.
@@ -246,6 +258,8 @@ bool CProcess_Manager::Unmap_File_Current(uint32_t handle) {
     // Nebo spise kazde vlakno ma svou bitmap s otevrenymi files a soubor ho 
     // zavre jen kdyz uz zadne z vlaken nema soubor otevreny a pak by se tohle muselo 
     // o level vyse v Handle_xxx_SWI
+
+    
 
     return true;
 }
