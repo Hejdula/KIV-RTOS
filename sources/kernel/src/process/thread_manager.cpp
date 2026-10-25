@@ -172,28 +172,28 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
         
 
         case NSWI_Thread_Service::Join: {
-            auto* target = cur_thread->process->threads[r0]; // vyzvedneme si ukazatel na vlakno, ktere joinujeme
+            auto* target_thread = cur_thread->process->threads[r0]; // vyzvedneme si ukazatel na vlakno, ktere joinujeme
 
-            if (target->state != NThread_State::Zombie) { // pokud dane vlakno jeste nedobehlo
+            if (target_thread->state != NThread_State::Zombie) { // pokud dane vlakno jeste nedobehlo
                 cur_thread->state = NThread_State::Blocked_on_Join; // tak se zablokujeme
-                cur_thread->blocked_on_tid = target->tid; // a ulozime, na kom jsme se zablokovali
+                cur_thread->blocked_on_tid = target_thread->tid; // a ulozime, na kom jsme se zablokovali
                 sScheduler.Schedule();
             }
 
             // ted uz vlakno zombie urcite je
             cur_thread->blocked_on_tid = Invalid_TID; // takze nastavime ze na nikoho necekame
-            r0 = target->exit_code;
+            target.r0 = target_thread->exit_code;
 
             bool others_waiting = false;
             for (TThread_Struct* thread : cur_thread->process->threads) { //projedeme vsechny vlakna, ktera jsou odblokovana nad timto vlaknem, ale jeste si nevyzvedla navratovou hodnotu
-                if (thread->state == NThread_State::Runnable && thread->blocked_on_tid == target->tid) { //
+                if (thread->state == NThread_State::Runnable && thread->blocked_on_tid == target_thread->tid) { //
                     others_waiting = true; // pokud nekdo takovy je, tak nebudeme delat cleanup
                     break;
                 }
             }
             if(!others_waiting) { // pokud jsme posledni, kdo si vybira navratovou hodnotu, tak uklidime TCB
-                sKernelMem.Free(cur_thread->process->threads[target->tid]);
-                cur_thread->process->threads[target->tid] = nullptr; // a nastavime v procesu ze dany handle je volny - TODO: tohle mozna bude v thread_manageru
+                sKernelMem.Free(cur_thread->process->threads[target_thread->tid]);
+                cur_thread->process->threads[target_thread->tid] = nullptr; // a nastavime v procesu ze dany handle je volny - TODO: tohle mozna bude v thread_manageru
                 cur_thread->process->thread_count--;
             }
 
