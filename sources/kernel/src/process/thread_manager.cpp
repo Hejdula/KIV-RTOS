@@ -192,9 +192,9 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
                 }
             }
             if(!others_waiting) { // pokud jsme posledni, kdo si vybira navratovou hodnotu, tak uklidime TCB
-            // TODO: dealokace TCB pokud jsme posledni, kdo si vybira exit_code
-            cur_thread->process->threads[target->tid] = nullptr; // a nastavime v procesu ze dany handle je volny - TODO: tohle mozna bude v thread_manageru
-            cur_thread->process->thread_count--;
+                sKernelMem.Free(cur_thread->process->threads[target->tid]);
+                cur_thread->process->threads[target->tid] = nullptr; // a nastavime v procesu ze dany handle je volny - TODO: tohle mozna bude v thread_manageru
+                cur_thread->process->thread_count--;
             }
 
             break;
@@ -216,11 +216,16 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             sPage_Manager.Free_Page(stack_page_kernel_virt);
             cur_thread->process->page_count--;
 
+            // Page table dealokuje terminate
+
             for (TThread_Struct* thread : cur_thread->process->threads) { //projedeme vsechny vlakna, ktera jsou zablokovana nad "my.join()"
                 if (thread->state == NThread_State::Blocked_on_Join && thread->blocked_on_tid == cur_thread->tid) {
                     thread->state = NThread_State::Runnable; // a odblokujeme je
                 }
             }
+
+            // TODO: pokud jsem posledni tak volam terminate?
+
             sScheduler.Schedule();
 
             break;
