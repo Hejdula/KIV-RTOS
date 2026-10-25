@@ -44,9 +44,9 @@ uint32_t CPage_Manager::Alloc_Page() {
     return 0;
 }
 
-void CPage_Manager::Free_Page(uint32_t fa)
+void CPage_Manager::Free_Page(uint32_t kernel_virt)
 {
     // pro vyssi bezpecnost v nejakych safe systemech lze tady data stranky premazavat napr. nulami po dealokaci
 
-    Mark((fa - mem::LowMemoryPhys) / mem::PageSize, false);
+    Mark((kernel_virt - mem::LowMemory) / mem::PageSize, false);
 }

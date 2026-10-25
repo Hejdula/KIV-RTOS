@@ -22,7 +22,7 @@ struct TThread_List_Node {
     TThread_Struct* thread;
 };
 
-class CThread_Manager;
+
 
 extern CThread_Manager sThread_Manager;
 constexpr uint32_t Invalid_TID = static_cast<uint32_t>(-1);

@@ -68,6 +68,7 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
         sPage_Manager.Free_Page(code_page_phys + mem::MemoryVirtualBase);
         sPage_Manager.Free_Page(stack_page_phys + mem::MemoryVirtualBase);
         sKernelMem.Free(process->threads[0]);
+        process->page_count -= 2;
         return Invalid_TID;
     }
 
@@ -78,7 +79,8 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
     process->threads[0]->cpu_context.ttbr0 = (reinterpret_cast<unsigned long>(pt) - mem::MemoryVirtualBase)
         | TTBR_Flags::Inner_Cacheable
         | TTBR_Flags::Shared;
-    
+
+
 
     return process->threads[0]->tid;
 }
@@ -202,7 +204,17 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             cur_thread->state = NThread_State::Zombie; // deklarujeme ze je zombie 
             cur_thread->exit_code = r0; // natavime exit code
 
-            // TODO: dealokace stacku
+            // vypoctu si adresu stackove stranky v process-prostoru. Jelikoz jsme sem skocili z programu (volanim), tak stack vlakna nebude nikdy prazdny, nemuze se stat ze by tohle vyhodilo adresu stranky o jedna vyssi
+            uint32_t stack_page_virt = (cur_thread->cpu_context.sp / PT_Region_Size) * PT_Region_Size;
+            // vypoctu si pointer na page table a odmapuju stack
+            uint32_t* pt = reinterpret_cast<uint32_t*>((cur_thread->cpu_context.ttbr0 & ~(TTBR_Flags::Inner_Cacheable | TTBR_Flags::Shared)) + mem::MemoryVirtualBase);
+            // vypoctu si adresu stackove stranky v kernel prostoru
+            const uint32_t stack_page_kernel_virt = (pt[stack_page_virt / PT_Region_Size] & 0xFFF00000) + mem::MemoryVirtualBase;
+            // odmapovavam z page table processu - potrebuji adresu v process prostoru
+            unmap_memory(pt, stack_page_virt);
+            // dealokuju stranku, kde byl stack - potrebuju adresu v kernel prostoru
+            sPage_Manager.Free_Page(stack_page_kernel_virt);
+            cur_thread->process->page_count--;
 
             for (TThread_Struct* thread : cur_thread->process->threads) { //projedeme vsechny vlakna, ktera jsou zablokovana nad "my.join()"
                 if (thread->state == NThread_State::Blocked_on_Join && thread->blocked_on_tid == cur_thread->tid) {
@@ -215,4 +227,3 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
         
     }
 }
-

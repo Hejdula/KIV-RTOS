@@ -49,3 +49,10 @@ void map_memory(uint32_t* target_pt, uint32_t phys, uint32_t virt) {
             | DL1_Flags::TEX_001
             | DL1_Flags::Shareable;
 }
+
+void unmap_memory(uint32_t* target_pt, uint32_t virt) {
+    target_pt[virt >> 20] = DL1_Flags::Access_Type_Translation_Fault;
+    // musime invalidovat TLB abychom z nej odstranili stranku kterou jsme prave odmapovali
+    mmu_data_sync_barrier();
+    mmu_invalidate_tlb();
+}
