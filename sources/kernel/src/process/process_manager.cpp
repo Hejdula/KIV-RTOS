@@ -280,11 +280,13 @@ void CProcess_Manager::Close_All_Files(TProcess_Struct* process) {
 
 
 
-// TODO: kam sakra patri tohle
+// dTODO: kam patri tohle
+// Zustane to tady, mame pristup do scheduleru ze ktereho si kdyztak vyzvedneme soucasne vlakno, kdyby bylo potreba
 void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target) {
-
-    // TODO: signalizace chyby
-    if (!mCurrent_Task_Node) {
+    
+    TProcess_Struct* cur_process = Get_Current_Process();
+    // xTODO: signalizace chyby
+    if (!cur_process) {
         return;
     }
 
@@ -309,65 +311,67 @@ void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, ui
         case NSWI_Filesystem_Service::Read: {
             target.r0 = 0;
 
-            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0]) {
+            if (r0 > Max_Process_Opened_Files || !cur_process->opened_files[r0]) {
                 return;
             }
 
-            target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Read(reinterpret_cast<char*>(r1), r2);
+            target.r0 = cur_process->opened_files[r0]->Read(reinterpret_cast<char*>(r1), r2);
             break;
         }
         case NSWI_Filesystem_Service::Write: {
             target.r0 = 0;
 
-            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0]) {
+            if (r0 > Max_Process_Opened_Files || !cur_process->opened_files[r0]) {
                 return;
             }
 
-            target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Write(reinterpret_cast<const char*>(r1), r2);
+            target.r0 = cur_process->opened_files[r0]->Write(reinterpret_cast<const char*>(r1), r2);
             break;
         }
         case NSWI_Filesystem_Service::Close: {
-            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0]) {
+            if (r0 > Max_Process_Opened_Files || !cur_process->opened_files[r0]) {
                 return;
             }
 
-            target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Close();
+            target.r0 = cur_process->opened_files[r0]->Close();
             Unmap_File_Current(r0);
 
             break;
         }
         case NSWI_Filesystem_Service::IOCtl: {
-            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0]) {
+            if (r0 > Max_Process_Opened_Files || !cur_process->opened_files[r0]) {
                 return;
             }
 
-            target.r0 = mCurrent_Task_Node->task->opened_files[r0]->IOCtl(static_cast<NIOCtl_Operation>(r1), reinterpret_cast<void*>(r2));
+            target.r0 = cur_process->opened_files[r0]->IOCtl(static_cast<NIOCtl_Operation>(r1), reinterpret_cast<void*>(r2));
             break;
         }
         case NSWI_Filesystem_Service::Notify: {
-            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0]) {
+            if (r0 > Max_Process_Opened_Files || !cur_process->opened_files[r0]) {
                 return;
             }
 
-            target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Notify(r1);
+            target.r0 = cur_process->opened_files[r0]->Notify(r1);
             break;
         }
         case NSWI_Filesystem_Service::Wait: {
-            if (r0 > Max_Process_Opened_Files || !mCurrent_Task_Node->task->opened_files[r0]) {
+            auto* cur_thread = sScheduler.Get_Current_Thread(); //v pripade wait musime zjistit ktere vlakno vola
+
+            if (r0 > Max_Process_Opened_Files || !cur_process->opened_files[r0]) {
                 return;
             }
 
-            mCurrent_Task_Node->task->notified_deadline = r2;
+            cur_thread->notified_deadline = r2;
 
             // nastavme deadline, kdyby Wait nahodou neblokoval
             if (r2 != Deadline_Unchanged) {
-                mCurrent_Task_Node->task->deadline = r2;
+                cur_thread->deadline = r2;
             }
 
-            target.r0 = mCurrent_Task_Node->task->opened_files[r0]->Wait(r1);
+            target.r0 = cur_process->opened_files[r0]->Wait(r1); // Wait volame z POV vlakna
 
             // v tento moment uz lze "budouci" deadline vymazat, uz je nastavena ve skutecne deadline bud shora nebo z notify kodu
-            mCurrent_Task_Node->task->notified_deadline = Deadline_Unchanged;
+            cur_thread->notified_deadline = Deadline_Unchanged;
             break;
         }
         case NSWI_Filesystem_Service::WaitAll:
@@ -378,7 +382,8 @@ void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, ui
     }
 }
 
-// TODO: TThread_struct misto TTask_Struct, jinak by mohlo fungovat stejne
+// dTODO: TThread_struct misto TTask_Struct, jinak by mohlo fungovat stejne
+// jinak tohle mooozna by mohlo byt v thread manageru, ale jako nevim no, tyka se to procesu i vlakna
 void CProcess_Manager::Handle_WaitAll_SWI(uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result &target)
 {
     target.r0 = Invalid_Handle;
@@ -390,66 +395,68 @@ void CProcess_Manager::Handle_WaitAll_SWI(uint32_t r0, uint32_t r1, uint32_t r2,
         return;
     }
 
-    TProcess_Struct *task = mCurrent_Task_Node->task;
+    TProcess_Struct *cur_process = Get_Current_Process();
 
     for (uint32_t i = 0; i < handle_count; i++) {
-        if (handles[i] >= Max_Process_Opened_Files || !task->opened_files[handles[i]]) {
+        if (handles[i] >= Max_Process_Opened_Files || !cur_process->opened_files[handles[i]]) {
             return;
         }
     }
 
-    // nastaveni deadline, kdyby nahodou nejaky soubor už byl ready
-    task->notified_deadline = r2;
+    
+    auto* cur_thread = sScheduler.Get_Current_Thread(); 
+    // nastaveni deadline, kdyby nahodou nejaky soubor uz byl ready - nastavujeme pro vlakno, ktere zavolalo tento syscall
+    cur_thread->notified_deadline = r2;
     if (r2 != Deadline_Unchanged) {
-        task->deadline = r2;
+        cur_thread->deadline = r2;
     }
 
-    // nejprve zkusime, zda neni nektery ze souboru jiz pripraven - pokud ano, vratime hned jeho handle a nebudeme blokovat process
+    // nejprve zkusime, zda neni nektery ze souboru jiz pripraven - pokud ano, vratime hned jeho handle a nebudeme blokovat vlakno
     for (uint32_t i = 0; i < handle_count; i++) {
-        if (task->opened_files[handles[i]]->Try_Wait_All_Reserve(1)) {
+        if (cur_process->opened_files[handles[i]]->Try_Wait_All_Reserve(1)) {
             target.r0 = handles[i];
-            task->multi_wait_ready_fd = handles[i];
+            cur_thread->multi_wait_ready_fd = handles[i];
             return;
         }
     }
 
     // Pokud dosud nebyl zadny soubor pripraven, aktualni process se ke vsem souborum zaregistruje do seznamu cekajicich procesu, a proces se zablokuje
-    task->is_multi_file_wait = true;
-    task->multi_wait_ready_fd = Invalid_Handle;
-    task->multi_wait_fd_bitmap = 0;
+    cur_thread->is_multi_file_wait = true;
+    cur_thread->multi_wait_ready_fd = Invalid_Handle;
+    cur_thread->multi_wait_fd_bitmap = 0;
 
     for (uint32_t i = 0; i < handle_count; i++) {
-        task->multi_wait_fd_bitmap |= (1 << handles[i]);
-        task->opened_files[handles[i]]->Wait_Enqueue_Current();
+        cur_thread->multi_wait_fd_bitmap |= (1 << handles[i]);
+        cur_process->opened_files[handles[i]]->Wait_Enqueue_Current();
     }
 
     bool file_ready = false;
     while (!file_ready) {
-        Block_Current_Thread();
+        Block_Current_Thread(); // TODO: co s timhle?
 
         // pokusime se po probuzeni ziskat resource od probouzejiciho souboru, a pokud se to povede, smycka skonci
-        if (task->multi_wait_ready_fd != Invalid_Handle && task->opened_files[task->multi_wait_ready_fd]->Wait_All_Acquire(1)) {
+        if (cur_thread->multi_wait_ready_fd != Invalid_Handle && cur_process->opened_files[cur_thread->multi_wait_ready_fd]->Wait_All_Acquire(1)) {
             // do navratove hodnoty dame handle soubor ktery proces uspesne probudil
-            target.r0 = task->multi_wait_ready_fd;
+            target.r0 = cur_thread->multi_wait_ready_fd;
             file_ready = true;
 
             // Dequeue ze vsech souboru, aby proces nebyl notifikovan znovu
             for (uint32_t i = 0; i < handle_count; i++) {
-                task->opened_files[handles[i]]->Wait_Dequeue_Process(task->pid);
+                cur_process->opened_files[handles[i]]->Wait_Dequeue_Process(cur_process->pid);
             }
         } else {
             // resource jsme neziskali - mozna doslo k falesnemu probuzeni, nebo nas nekdo jiny probudil
-            task->multi_wait_ready_fd = Invalid_Handle;
+            cur_thread->multi_wait_ready_fd = Invalid_Handle;
         }
         //  pokud resource nebyl po probuzeni ziskan - zablokuj se znovu
     }
 
     // cleanup
-    task->is_multi_file_wait = false;
-    task->multi_wait_fd_bitmap = 0;
+    cur_thread->is_multi_file_wait = false;
+    cur_thread->multi_wait_fd_bitmap = 0;
 
     // v tento moment uz lze "budouci" deadline vymazat, uz je nastavena ve skutecne deadline bud shora nebo z notify kodu
-    task->notified_deadline = Deadline_Unchanged;
+    cur_thread->notified_deadline = Deadline_Unchanged;
 }
 
 
