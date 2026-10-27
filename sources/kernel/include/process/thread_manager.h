@@ -11,10 +11,8 @@
 #include "process.h"
 #include "thread.h"
 #include "swi.h"
-#include "scheduler.h"
 #include <fs/filesystem.h>
 #include <stdstring.h>
-
 
 struct TThread_List_Node {
     TThread_List_Node* prev;
@@ -22,9 +20,6 @@ struct TThread_List_Node {
     TThread_Struct* thread;
 };
 
-
-
-extern CThread_Manager sThread_Manager;
 constexpr uint32_t Invalid_TID = static_cast<uint32_t>(-1);
 
 class CThread_Manager
@@ -54,7 +49,4 @@ public:
 
 };
 
-
-
-
-
+extern CThread_Manager sThread_Manager;

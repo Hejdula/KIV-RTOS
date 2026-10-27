@@ -4,7 +4,6 @@
 
 #include "process.h"
 #include "swi.h"
-#include "thread_manager.h"
 #include <fs/filesystem.h>
 #include <stdstring.h>
 

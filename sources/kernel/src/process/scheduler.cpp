@@ -151,6 +151,8 @@ void CScheduler::Switch_To(TThread_List_Node* node) {
     // prehodime na novy proces, pridelime casova kvanta a nastavime proces do stavu Running
     mCurrent_Thread = node->thread;
     mCurrent_Thread_Node = node;
+    // TODO: nastavit current process u process manageru 
+    // + zamyslet se kde by to melo byt, jestli tady ve scheduleru nebo to nechat v procesu
     mCurrent_Thread->sched_counter = mCurrent_Thread->process->sched_static_priority;
     mCurrent_Thread->state = NThread_State::Running;
 

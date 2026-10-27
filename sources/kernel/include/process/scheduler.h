@@ -1,6 +1,7 @@
 #pragma once
 
 #include <process/process_manager.h>
+#include <process/thread_manager.h>
 
 
 class CScheduler {
