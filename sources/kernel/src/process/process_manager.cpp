@@ -1,8 +1,10 @@
 #include <cstdint>
 #include <process/process_manager.h>
+#include <process/process.h>
 #include <process/resource_manager.h>
 #include <process/elf_loader.h>
 #include <process/scheduler.h>
+#include <process/thread_manager.h>
 #include <process/thread.h>
 
 
@@ -76,7 +78,7 @@ bool CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file) {
     // postupne vzbudime vsechny vlakna ktere cekaji nad danym souborem
     bool notified_some;
     for (TThread_Struct* thread :process->threads){
-        if(thread->fd_bitmap & 1 << handle_index){
+        if(thread->multi_wait_fd_bitmap & 1 << handle_index){
             if(thread->is_multi_file_wait){
                 thread->multi_wait_ready_fd = handle_index;
             }
@@ -218,7 +220,7 @@ uint32_t CProcess_Manager::Map_File_To_Current(IFile* file) {
     for (uint32_t i = 0; i < Max_Process_Opened_Files; i++) { // kontrolujeme vsechny volne sloty
         if (current->opened_files[i] == nullptr) { // pokud je volny slot
             for (TThread_Struct* thread : current->threads) { // tak musime u vsech vlaken zkontrolovat jestli nad nim necekaji (koncept dead-wait)
-                if (thread->fd_bitmap & 1 << i) {
+                if (thread->multi_wait_fd_bitmap & 1 << i) {
                     slot_in_use_by_waiting_thread = true;
                     break;
                 }
@@ -432,7 +434,7 @@ void CProcess_Manager::Handle_WaitAll_SWI(uint32_t r0, uint32_t r1, uint32_t r2,
 
     bool file_ready = false;
     while (!file_ready) {
-        Block_Current_Thread(); // TODO: co s timhle?
+        sScheduler.Block_Current_Thread(); 
 
         // pokusime se po probuzeni ziskat resource od probouzejiciho souboru, a pokud se to povede, smycka skonci
         if (cur_thread->multi_wait_ready_fd != Invalid_Handle && cur_process->opened_files[cur_thread->multi_wait_ready_fd]->Wait_All_Acquire(1)) {

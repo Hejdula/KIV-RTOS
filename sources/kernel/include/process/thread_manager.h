@@ -1,18 +1,9 @@
 #pragma once
 #include <hal/intdef.h>
-#include <memory/kernel_heap.h>
-#include <memory/pages.h>
-#include <memory/memmap.h>
-#include <memory/mmu.h>
-#include <memory/pt_alloc.h>
-#include <process/elf_loader.h>
-
 
 #include "process.h"
 #include "thread.h"
 #include "swi.h"
-#include <fs/filesystem.h>
-#include <stdstring.h>
 
 struct TThread_List_Node {
     TThread_List_Node* prev;
@@ -37,8 +28,6 @@ public:
     uint32_t Create_First_Thread(TProcess_Struct* process, unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system);
     // Vytvori vlakno dle volajiciho rodice
     uint32_t Fork_Thread(TThread_Struct* parent);
-    //ziska TID prave naplanovaneho vlakna (pro systemove volani )
-    uint32_t Get_Current_TID();
     //prevede dany thread do runnable, nastavi notified 
     bool Notify_Thread(TThread_Struct* thread);  
 

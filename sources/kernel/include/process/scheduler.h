@@ -1,7 +1,8 @@
 #pragma once
 
-#include <process/process_manager.h>
-#include <process/thread_manager.h>
+struct TThread_Struct;
+struct TThread_List_Node;
+enum class NGet_Sched_Info_Type;
 
 
 class CScheduler {

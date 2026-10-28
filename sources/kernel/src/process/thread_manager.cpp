@@ -1,5 +1,13 @@
 #include <process/thread_manager.h>
+#include <process/process_manager.h>
+#include <process/scheduler.h>
 #include <drivers/timer.h>
+#include <memory/kernel_heap.h>
+#include <memory/pages.h>
+#include <memory/memmap.h>
+#include <memory/mmu.h>
+#include <memory/pt_alloc.h>
+#include <process/elf_loader.h>
 
 // "importovane" funkce z asm
 extern "C" {

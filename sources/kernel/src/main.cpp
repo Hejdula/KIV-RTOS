@@ -3,11 +3,11 @@
 #include <drivers/timer.h>
 #include <process/process_manager.h>
 #include <fs/filesystem.h>
-
+#include <process/scheduler.h>
 #include <drivers/uart.h>
 
 extern "C" void Timer_Callback() {
-    sProcessMgr.Schedule();
+    sScheduler.Schedule();
 }
 
 extern "C" unsigned char __init_task_elf[];
@@ -56,7 +56,7 @@ extern "C" int _kernel_main(void) {
     sInterruptCtl.Set_Mask_IRQ(false);
 
     // vynutime prvni spusteni planovace - rovnou se naplanuje prvni proces
-    sProcessMgr.Schedule();
+    sScheduler.Schedule();
 
     // tohle uz se nejspis vubec nespusti, CPU byl uz pridelen nejakemu tasku, a od ted uz se o nej budou stridat pouze tasky
     while (true) {

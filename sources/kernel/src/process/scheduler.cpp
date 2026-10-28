@@ -1,5 +1,7 @@
 #include "drivers/timer.h"
 #include <process/scheduler.h>
+#include <process/process_manager.h>
+#include <process/thread.h>
 #include <process/thread_manager.h>
 
 extern "C" {
@@ -223,4 +225,3 @@ bool CScheduler::Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target) {
     }
     return true;
 }
-
