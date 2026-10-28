@@ -1,6 +1,7 @@
 #include <process/pipe.h>
 #include <memory/kernel_heap.h>
 #include <process/process_manager.h>
+#include <process/scheduler.h>
 #include <process/resource_manager.h>
 
 CPipe::CPipe()
@@ -114,7 +115,7 @@ bool CPipe::Wait(uint32_t count) {
 
     spinlock_unlock(&mBuffer_Lock);
 
-    sProcessMgr.Block_Current_Process();
+    sScheduler.Block_Current_Thread();
 
     return true;
 }

@@ -11,6 +11,8 @@
 
 constexpr uint32_t Max_ProcFS_File_Len = 64;
 
+// TODO: prozkoumat co ma tohle vubec delat
+
 // virtualni soubor pro proces s PIDem (marker)
 class CProcFS_Task_File : public IFile {
     protected:

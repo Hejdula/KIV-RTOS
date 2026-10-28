@@ -1,5 +1,6 @@
 #include <process/semaphore.h>
 #include <process/process_manager.h>
+#include <process/scheduler.h>
 #include <process/resource_manager.h>
 
 CSemaphore::CSemaphore()
@@ -42,7 +43,7 @@ bool CSemaphore::Wait(uint32_t count) {
 
         spinlock_unlock(&mLock);
 
-        sProcessMgr.Block_Current_Process();
+        sScheduler.Block_Current_Thread();
 
         spinlock_lock(&mLock);
     }

@@ -5,6 +5,7 @@
 #include <drivers/gpio.h>
 #include <drivers/timer.h>
 #include <process/process_manager.h>
+#include <process/thread_manager.h>
 #include <process/swi.h>
 
 #include "drivers/uart.h"
@@ -27,8 +28,8 @@ extern "C" TSWI_Result* _internal_software_interrupt_handler(uint32_t r0, uint32
     NSWI_Facility facility = static_cast<NSWI_Facility>(service_identifier >> 6);
 
     switch (facility) {
-        case NSWI_Facility::Process:
-            sProcessMgr.Handle_Process_SWI(static_cast<NSWI_Process_Service>(service_identifier & 0x3F), r0, r1, r2, _SWI_Result);
+        case NSWI_Facility::Thread:
+            sThread_Manager.Handle_Thread_SWI(static_cast<NSWI_Thread_Service>(service_identifier & 0x3F), r0, r1, r2, _SWI_Result);
             break;
         case NSWI_Facility::Filesystem:
             sProcessMgr.Handle_Filesystem_SWI(static_cast<NSWI_Filesystem_Service>(service_identifier & 0x3F), r0, r1, r2, _SWI_Result);

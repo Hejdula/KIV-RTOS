@@ -3,6 +3,7 @@
 #include <process/process_manager.h>
 #include <process/thread.h>
 #include <process/thread_manager.h>
+#include <stdstring.h>
 
 extern "C" {
     void context_switch(TCPU_Context* ctx_to, TCPU_Context* ctx_from);

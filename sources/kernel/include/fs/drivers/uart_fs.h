@@ -4,6 +4,7 @@
 #include <hal/peripherals.h>
 #include <memory/kernel_heap.h>
 #include <fs/filesystem.h>
+#include <process/scheduler.h>
 #include <stdstring.h>
 
 // virtualni UART soubor
@@ -37,7 +38,7 @@ class CUART_File final : public IFile {
                 sUART0.Wait_For_Event(this);
 
                 // zablokujeme, probudi nas az notify
-                sProcessMgr.Block_Current_Process();
+                sScheduler.Block_Current_Thread();
                 return true;
             }
 

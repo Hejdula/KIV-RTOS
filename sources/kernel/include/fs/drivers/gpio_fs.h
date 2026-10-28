@@ -5,7 +5,7 @@
 #include <memory/kernel_heap.h>
 #include <fs/filesystem.h>
 #include <stdstring.h>
-#include <process/process_manager.h>
+#include <process/scheduler.h>
 
 // virtualni soubor pro GPIO pin
 class CGPIO_File final : public IFile {
@@ -68,6 +68,9 @@ class CGPIO_File final : public IFile {
                 case NIOCtl_Operation::Disable_Event_Detection:
                     sGPIO.Disable_Event_Detect(mPinNo, evtype);
                     return true;
+                // pridan default case na potlaceni warningu        
+                default:
+                    return false;
             }
 
             return false;
@@ -89,7 +92,7 @@ class CGPIO_File final : public IFile {
             Wait_Enqueue_Current();
 
             // zablokujeme, probudi nas az notify
-	        sProcessMgr.Block_Current_Process();
+	        sScheduler.Block_Current_Thread();
             return true;
         }
 };

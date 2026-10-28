@@ -18,7 +18,7 @@ enum class NSWI_Result_Code {
 
 // parametr volani SWI - horni 2 bity
 enum class NSWI_Facility {
-    Process         = 0b00,
+    Thread         = 0b00,
     Filesystem      = 0b01,
 };
 

@@ -1,5 +1,6 @@
 #include <process/condvar.h>
 #include <process/process_manager.h>
+#include <process/scheduler.h>
 #include <process/resource_manager.h>
 
 CCondition_Variable::CCondition_Variable()
@@ -22,7 +23,7 @@ bool CCondition_Variable::Wait(uint32_t count) {
 
     mMutex->Unlock();
 
-    sProcessMgr.Block_Current_Process();
+    sScheduler.Block_Current_Thread();
 
     mMutex->Lock();
 

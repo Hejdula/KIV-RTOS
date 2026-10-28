@@ -1,6 +1,7 @@
 #include <process/broadcast_channel.h>
 #include <memory/kernel_heap.h>
 #include <process/process_manager.h>
+#include <process/scheduler.h>
 #include <process/resource_manager.h>
 
 #include "stdfile.h"
@@ -68,7 +69,7 @@ uint32_t CBroadcast_Channel::Read(char *buffer, uint32_t len) {
     while (mGeneration == Broadcast_No_Message || reader_info->last_read_generation == mGeneration) {
         Wait_Enqueue_Current();
         mMutex.Unlock();
-        sProcessMgr.Block_Current_Process();
+        sScheduler.Block_Current_Thread();
         mMutex.Lock();
     }
 
@@ -164,7 +165,7 @@ bool CBroadcast_Channel::Wait(uint32_t count) {
     while (mGeneration == Broadcast_No_Message || reader_info->last_read_generation == mGeneration) {
         Wait_Enqueue_Current();
         mMutex.Unlock();
-        sProcessMgr.Block_Current_Process();
+        sScheduler.Block_Current_Thread();
     }
 
     return true;

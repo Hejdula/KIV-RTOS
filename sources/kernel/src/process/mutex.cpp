@@ -1,6 +1,7 @@
 #include <process/mutex.h>
 #include <process/spinlock.h>
 #include <process/process_manager.h>
+#include <process/scheduler.h>
 #include <process/resource_manager.h>
 
 #include <stdstring.h>
@@ -23,7 +24,7 @@ bool CMutex::Lock() {
         Wait_Enqueue_Current();
 
         // NOTE: tady by mohlo byt vhodne zavest podstav pro blokovany stav nad mutexem (a volat pak s parametrem)
-        sProcessMgr.Block_Current_Process();
+        sScheduler.Block_Current_Thread();
     }
 
     mHolder_PID = cpid;
