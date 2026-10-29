@@ -1,8 +1,8 @@
 #include "drivers/timer.h"
+#include <process/thread_manager.h>
 #include <process/process_manager.h>
 #include <process/scheduler.h>
 #include <process/thread.h>
-#include <process/thread_manager.h>
 #include <stdstring.h>
 
 CScheduler sScheduler;

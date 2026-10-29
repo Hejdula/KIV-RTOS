@@ -7,8 +7,9 @@
 #include <memory/pt_alloc.h>
 #include <process/elf_loader.h>
 #include <process/process_manager.h>
-#include <process/scheduler.h>
 #include <process/thread_manager.h>
+#include <process/scheduler.h>
+
 
 CThread_Manager sThread_Manager;
 
@@ -17,6 +18,8 @@ extern "C" {
 void user_process_bootstrap();
 void system_process_bootstrap();
 };
+
+CThread_Manager::CThread_Manager() {};
 
 inline TThread_Struct* CThread_Manager::Alloc_Thread_Struct() {
     auto* newThread = sKernelMem.Alloc<TThread_Struct>();
@@ -32,12 +35,12 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
     if (!threadnode) {
         return Invalid_TID; // Allocation failed
     }
-    threadnode->next = mThread_List_Head;
+    threadnode->next = this->mThread_List_Head;
     threadnode->prev = nullptr;
-    if (mThread_List_Head) {
-        mThread_List_Head->prev = threadnode;
+    if (this->mThread_List_Head) {
+        this->mThread_List_Head->prev = threadnode;
     }
-    mThread_List_Head = threadnode;
+    this->mThread_List_Head = threadnode;
 
     
 
@@ -300,4 +303,4 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
     }
 }
 
-TThread_List_Node* CThread_Manager::Get_Thread_List_Head() { return mThread_List_Head; };
+TThread_List_Node* CThread_Manager::Get_Thread_List_Head() { return this->mThread_List_Head; };

@@ -22,8 +22,7 @@ class CThread_Manager {
     
 
   public:
-    CThread_Manager() = default;
-    ~CThread_Manager() = default;
+    CThread_Manager();
     // TODO: tady uklidit
 
     // Vytvori prvni vlakno procesu, nahraje kod do pameti

@@ -19,7 +19,7 @@
 #include <drivers/uart.h>
 
 CProcess_Manager sProcessMgr;
-CThread_Manager sThreadMgr;
+//CThread_Manager sThreadMgr; kdo je za tohle zodpovedny tomu hlava upadne
 
 CProcess_Manager::CProcess_Manager() : mLast_PID(0), mProcess_List_Head(nullptr), mCurrent_Process_Node(nullptr) {}
 
@@ -113,7 +113,7 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     }
 
     // zalozime prvni vlakno procesu
-    if (sThreadMgr.Create_First_Thread(process, elf_file_data, elf_file_length, is_system) == Invalid_TID) {
+    if (sThread_Manager.Create_First_Thread(process, elf_file_data, elf_file_length, is_system) == Invalid_TID) {
         // pokud se nepodarilo zalozeni, uvolnime alokovane zdroje a vratime chybu
         sKernelMem.Free(procnode->process);
         sKernelMem.Free(procnode);

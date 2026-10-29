@@ -38,10 +38,10 @@ extern "C" int _kernel_main(void) {
     // vytvoreni vsech tasku
     // TODO: presunuti do init procesu a nejake inicializacni sekce
     sProcessMgr.Create_Process(__sos_task_elf, __sos_task_elf_len, false);
-    sProcessMgr.Create_Process(__oled_task_elf, __oled_task_elf_len, false);
-    sProcessMgr.Create_Process(__logger_task_elf, __logger_task_elf_len, false);
-    sProcessMgr.Create_Process(__counter_task_elf, __counter_task_elf_len, false);
-    sProcessMgr.Create_Process(__tilt_task_elf, __tilt_task_elf_len, false);
+    //sProcessMgr.Create_Process(__oled_task_elf, __oled_task_elf_len, false);
+    //sProcessMgr.Create_Process(__logger_task_elf, __logger_task_elf_len, false);
+    //sProcessMgr.Create_Process(__counter_task_elf, __counter_task_elf_len, false);
+    //sProcessMgr.Create_Process(__tilt_task_elf, __tilt_task_elf_len, false);
 
     // zatim zakazeme IRQ casovace
     sInterruptCtl.Disable_Basic_IRQ(hal::IRQ_Basic_Source::Timer);
