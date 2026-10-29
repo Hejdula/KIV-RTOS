@@ -9,6 +9,8 @@
 #include <memory/pt_alloc.h>
 #include <process/elf_loader.h>
 
+CThread_Manager sThread_Manager;
+
 // "importovane" funkce z asm
 extern "C" {
     void user_process_bootstrap();
@@ -21,8 +23,7 @@ inline TThread_Struct *CThread_Manager::Create_Thread()
 
 }
 
-uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system)
-{
+uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system) {
     if(process->threads[0] != nullptr) {
         return Invalid_TID; //pokud tam uz vlakno je tak jsme tuhle funkci zavolali omylem
     }
@@ -116,8 +117,7 @@ bool CThread_Manager::Notify_Thread(TThread_Struct* thread) {
 // ANSWER: Terminate zabije proces ale z POV vlakna, GETPID muze udelat kazdy vlakno samo o sobe, za me tohle vsechno patri do thread - Adam
 // TODO: pridat exit_thread, pridat join
 
-void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result &target)
-{
+void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result &target) {
     // TODO: signalizace chyby
     TThread_Struct* cur_thread = sScheduler.Get_Current_Thread();
     if (!cur_thread) {
@@ -240,3 +240,9 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
         
     }
 }
+
+
+TThread_List_Node* CThread_Manager::Get_Thread_List_Head(){
+
+    return mThread_List_Head;
+};

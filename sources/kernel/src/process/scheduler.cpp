@@ -5,6 +5,8 @@
 #include <process/thread_manager.h>
 #include <stdstring.h>
 
+CScheduler sScheduler;
+
 extern "C" {
     void context_switch(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
     void context_switch_first(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
