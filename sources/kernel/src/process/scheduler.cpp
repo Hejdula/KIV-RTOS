@@ -1,6 +1,6 @@
 #include "drivers/timer.h"
-#include <process/scheduler.h>
 #include <process/process_manager.h>
+#include <process/scheduler.h>
 #include <process/thread.h>
 #include <process/thread_manager.h>
 #include <stdstring.h>
@@ -8,12 +8,12 @@
 CScheduler sScheduler;
 
 extern "C" {
-    void context_switch(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
-    void context_switch_first(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
+void context_switch(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
+void context_switch_first(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
 };
 
 CScheduler::CScheduler() : mCurrent_Thread(nullptr) {
-    //mSchedule_Fnc = &CScheduler::Schedule_RR;
+    // mSchedule_Fnc = &CScheduler::Schedule_RR;
     mSchedule_Fnc = &CScheduler::Schedule_EDF;
 }
 
@@ -36,7 +36,7 @@ TThread_List_Node* CScheduler::Schedule_RR() {
     // proces k naplanovani musi bud byt ve stavu runnable (jiz nekdy bezel a muze bezet znovu) nebo running (pak jde o stavajici proces)
     // a nebo new (novy proces, ktery jeste nebyl planovany)
     while (node->thread->state != NThread_State::Runnable && node->thread->state != NThread_State::Running && node->thread->state != NThread_State::New) {
-        if (!node->next) { 
+        if (!node->next) {
             node = mCurrent_Thread_Node;
             break;
         } else {
@@ -72,7 +72,7 @@ TThread_List_Node* CScheduler::Schedule_EDF() {
         // "v nejhorsim" naplanujeme i takovy proces, ktery nema deadline
         if (!next) {
             next = itr;
-        // pokud tento proces ma deadline...
+            // pokud tento proces ma deadline...
         } else if (itr->thread->deadline != Indefinite) {
             // vybereme ho jen pokud je deadline drivejsi, nez aktualne vybraneho procesu
             // TODO: preteceni uint32_t
@@ -92,9 +92,7 @@ TThread_List_Node* CScheduler::Schedule_EDF() {
     return next;
 }
 
-TThread_Struct* CScheduler::Get_Current_Thread() const {
-    return mCurrent_Thread;
-}
+TThread_Struct* CScheduler::Get_Current_Thread() const { return mCurrent_Thread; }
 
 void CScheduler::Block_Current_Thread() {
     TThread_Struct* cur = Get_Current_Thread();
@@ -102,7 +100,7 @@ void CScheduler::Block_Current_Thread() {
     cur->state = NThread_State::Blocked;
 
     // xTODO: doopravdy to takto chceme?
-    //if (cur->notified_deadline != Deadline_Unchanged)
+    // if (cur->notified_deadline != Deadline_Unchanged)
     //    cur->deadline = Indefinite;
 
     Schedule();
@@ -116,7 +114,8 @@ void CScheduler::Schedule() {
         while (node) {
             if (node->thread->state == NThread_State::Interruptable_Sleep) {
                 if (node->thread->sleep_timer != Indefinite && node->thread->sleep_timer <= sTimer.Get_Tick_Count()) {
-                    sThread_Manager.Notify_Thread(node->thread);                }
+                    sThread_Manager.Notify_Thread(node->thread);
+                }
             }
 
             node = node->next;
@@ -156,7 +155,7 @@ void CScheduler::Switch_To(TThread_List_Node* node) {
     // prehodime na novy proces, pridelime casova kvanta a nastavime proces do stavu Running
     mCurrent_Thread = node->thread;
     mCurrent_Thread_Node = node;
-    // TODO: nastavit current process u process manageru 
+    // TODO: nastavit current process u process manageru
     // + zamyslet se kde by to melo byt, jestli tady ve scheduleru nebo to nechat v procesu
     mCurrent_Thread->sched_counter = mCurrent_Thread->process->sched_static_priority;
     mCurrent_Thread->state = NThread_State::Running;
@@ -199,7 +198,7 @@ bool CScheduler::Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target) {
             TThread_List_Node* node = sThread_Manager.Get_Thread_List_Head();
             uint32_t procCnt = 0;
 
-            CProcess_Summary_Info *sum = reinterpret_cast<CProcess_Summary_Info*>(target);
+            CProcess_Summary_Info* sum = reinterpret_cast<CProcess_Summary_Info*>(target);
             bzero(sum, sizeof(CProcess_Summary_Info));
 
             while (node) {

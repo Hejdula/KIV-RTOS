@@ -1,38 +1,37 @@
 #include "process/process.h"
-#include <process/thread_manager.h>
-#include <process/process_manager.h>
-#include <process/scheduler.h>
 #include <drivers/timer.h>
 #include <memory/kernel_heap.h>
-#include <memory/pages.h>
 #include <memory/memmap.h>
 #include <memory/mmu.h>
+#include <memory/pages.h>
 #include <memory/pt_alloc.h>
 #include <process/elf_loader.h>
+#include <process/process_manager.h>
+#include <process/scheduler.h>
+#include <process/thread_manager.h>
 
 CThread_Manager sThread_Manager;
 
 // "importovane" funkce z asm
 extern "C" {
-    void user_process_bootstrap();
-    void system_process_bootstrap();
+void user_process_bootstrap();
+void system_process_bootstrap();
 };
 
-inline TThread_Struct *CThread_Manager::Alloc_Thread_Struct()
-{
+inline TThread_Struct* CThread_Manager::Alloc_Thread_Struct() {
     auto* newThread = sKernelMem.Alloc<TThread_Struct>();
     return newThread;
 }
 
 uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system) {
-    if(process->threads[0] != nullptr) {
-        return Invalid_TID; //pokud tam uz vlakno je tak jsme tuhle funkci zavolali omylem
+    if (process->threads[0] != nullptr) {
+        return Invalid_TID; // pokud tam uz vlakno je tak jsme tuhle funkci zavolali omylem
     }
 
     // alokujeme pamet pro vlakno
     process->threads[0] = this->Alloc_Thread_Struct();
     // defaultni a implicitni hodnoty pro vlakno
-    process->threads[0]->tid = 0; 
+    process->threads[0]->tid = 0;
     process->threads[0]->state = NThread_State::New;
     process->threads[0]->sched_counter = process->sched_static_priority;
     process->threads[0]->is_multi_file_wait = false;
@@ -46,7 +45,8 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
 
     // pc = "aktualni" kod k provadeni, tedy bootstrap procesu v jadre - lisi se fakticky jen tim, zda je do CPSR vlozen rezim uzivatelsky nebo systemovy,
     // ale teoreticky muzeme chtit pridat jeste dalsi veci specificke pro nejaky z rezimu
-    process->threads[0]->cpu_context.pc = is_system ? reinterpret_cast<unsigned long>(&system_process_bootstrap) : reinterpret_cast<unsigned long>(&user_process_bootstrap);
+    process->threads[0]->cpu_context.pc =
+        is_system ? reinterpret_cast<unsigned long>(&system_process_bootstrap) : reinterpret_cast<unsigned long>(&user_process_bootstrap);
     // sp = zasobnik, vzdy je relokovany na nejakou fixni pamet, pro nas je jednoduche volit ho o velikosti 1MB
     // pozn. zasobnik roste na druhou stranu, takze musime SP nastavit na konec stranky
     process->threads[0]->cpu_context.sp = 0x90000000 + mem::PageSize;
@@ -61,7 +61,8 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
 
     // zkopirujeme zakladni kernelovou tabulku - to proto, aby zustalo mapovani 0xFxxxxxxx a 0xCxxxxxxx adres (kod a data) a mohli jsme vykonavat
     // napr. obsluhu systemoveho volani beze zmeny adresniho prostoru
-    // pozn.: tohle kopirovani se da odbourat korektnim pouzitim TTBR1 - pak by TTBR1 prekladal vse napr. od 0x8xxxxxxx vyse a TTBR0 by zustal pro spodni cast adr. rozsahu
+    // pozn.: tohle kopirovani se da odbourat korektnim pouzitim TTBR1 - pak by TTBR1 prekladal vse napr. od 0x8xxxxxxx vyse a TTBR0 by zustal pro spodni cast
+    // adr. rozsahu
     //        pro jednoduchost ted nechme takto, dvojice bazovych registru pro tabulky stranek jsou spise specialita ARMu a pribuznych procesoru
     copy_kernel_page_table_to(pt);
 
@@ -71,7 +72,8 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
     map_memory(pt, stack_page_phys, 0x90000000);
 
     // nakopirujeme kod do kodove stranky, vysledkem nacitani je i PC vstupniho bodu procesu
-    const uint32_t elf_pc = CELF_Loader::Load_ELF32_Image(elf_file_data, reinterpret_cast<unsigned char*>(code_page_phys) + mem::MemoryVirtualBase, mem::PageSize);
+    const uint32_t elf_pc =
+        CELF_Loader::Load_ELF32_Image(elf_file_data, reinterpret_cast<unsigned char*>(code_page_phys) + mem::MemoryVirtualBase, mem::PageSize);
     if (elf_pc == CELF_Loader::Invalid_Entry_Point) {
         // pokud se nepodarilo nacteni, uvolnime alokovane zdroje a vratime chybu
         sPT_Alloc.Free(pt);
@@ -85,21 +87,17 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
     // nastavime PC vlakna na vstupni bod programu, ktery jsme nacetli z ELF souboru
     process->threads[0]->cpu_context.lr = elf_pc;
 
-    // nastavime ulozene TTBR0 procesu - tady musi byt fyzicka adresa, proto odecitame bazi (vsechny fyzicke adresy jsou v kernelovem modu mapovany na "0xC0000000 + offset")
-    process->threads[0]->cpu_context.ttbr0 = (reinterpret_cast<unsigned long>(pt) - mem::MemoryVirtualBase)
-        | TTBR_Flags::Inner_Cacheable
-        | TTBR_Flags::Shared;
-
-
+    // nastavime ulozene TTBR0 procesu - tady musi byt fyzicka adresa, proto odecitame bazi (vsechny fyzicke adresy jsou v kernelovem modu mapovany na
+    // "0xC0000000 + offset")
+    process->threads[0]->cpu_context.ttbr0 = (reinterpret_cast<unsigned long>(pt) - mem::MemoryVirtualBase) | TTBR_Flags::Inner_Cacheable | TTBR_Flags::Shared;
 
     return process->threads[0]->tid;
 }
 
-
-uint32_t CThread_Manager::Create_Thread(TProcess_Struct *process, uint32_t func_addr){
+uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_addr) {
     // Vytvoreni thread struct
     // alokovat stack pro vlakno
-    // first fit 
+    // first fit
     return 0;
     // return TID;
 };
@@ -126,7 +124,7 @@ bool CThread_Manager::Notify_Thread(TThread_Struct* thread) {
 // ANSWER: Terminate zabije proces ale z POV vlakna, GETPID muze udelat kazdy vlakno samo o sobe, za me tohle vsechno patri do thread - Adam
 // TODO: pridat exit_thread, pridat join
 
-void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result &target) {
+void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target) {
     // TODO: signalizace chyby
     TThread_Struct* cur_thread = sScheduler.Get_Current_Thread();
     if (!cur_thread) {
@@ -140,7 +138,7 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
 
         case NSWI_Thread_Service::Get_TID:
             target.r0 = cur_thread->tid;
-            break;    
+            break;
 
         case NSWI_Thread_Service::Terminate:
             // TODO: je treba korekne ukoncit vsechny vlakna, soubory, heap atd a nastavit process jako zombie
@@ -159,7 +157,7 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             cur_thread->sched_counter = 1;
             cur_thread->state = NThread_State::Interruptable_Sleep;
             cur_thread->notified_deadline = r1;
-            cur_thread->sleep_timer =  ( (r0 == Indefinite) ? r0 : sTimer.Get_Tick_Count() + r0 );
+            cur_thread->sleep_timer = ((r0 == Indefinite) ? r0 : sTimer.Get_Tick_Count() + r0);
             sScheduler.Schedule();
             break;
 
@@ -182,10 +180,10 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             }
             break;
         }
-        
+
         // TODO: implementovat
         case NSWI_Thread_Service::Thread:
-            if(cur_thread->process->thread_count < Max_Process_Threads){
+            if (cur_thread->process->thread_count < Max_Process_Threads) {
                 r0 = 0;
             }
 
@@ -194,14 +192,13 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             // nastavit cpu kontext - v r0 je adresa fce co se ma vykonat
             // v r0 vratit TID (invalid_tid pokud vlakno neslo vytvorit? resp prekrocili jsme max_thread_cound nebo dosla pamet)
             break;
-        
 
         case NSWI_Thread_Service::Join: {
             auto* target_thread = cur_thread->process->threads[r0]; // vyzvedneme si ukazatel na vlakno, ktere joinujeme
 
-            if (target_thread->state != NThread_State::Zombie) { // pokud dane vlakno jeste nedobehlo
+            if (target_thread->state != NThread_State::Zombie) {    // pokud dane vlakno jeste nedobehlo
                 cur_thread->state = NThread_State::Blocked_on_Join; // tak se zablokujeme
-                cur_thread->blocked_on_tid = target_thread->tid; // a ulozime, na kom jsme se zablokovali
+                cur_thread->blocked_on_tid = target_thread->tid;    // a ulozime, na kom jsme se zablokovali
                 sScheduler.Schedule();
             }
 
@@ -210,29 +207,34 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             target.r0 = target_thread->exit_code;
 
             bool others_waiting = false;
-            for (TThread_Struct* thread : cur_thread->process->threads) { //projedeme vsechny vlakna, ktera jsou odblokovana nad timto vlaknem, ale jeste si nevyzvedla navratovou hodnotu
+            for (TThread_Struct* thread :
+                 cur_thread->process
+                     ->threads) { // projedeme vsechny vlakna, ktera jsou odblokovana nad timto vlaknem, ale jeste si nevyzvedla navratovou hodnotu
                 if (thread->state == NThread_State::Runnable && thread->blocked_on_tid == target_thread->tid) { //
                     others_waiting = true; // pokud nekdo takovy je, tak nebudeme delat cleanup
                     break;
                 }
             }
-            if(!others_waiting) { // pokud jsme posledni, kdo si vybira navratovou hodnotu, tak uklidime TCB
+            if (!others_waiting) { // pokud jsme posledni, kdo si vybira navratovou hodnotu, tak uklidime TCB
                 sKernelMem.Free(cur_thread->process->threads[target_thread->tid]);
-                cur_thread->process->threads[target_thread->tid] = nullptr; // a nastavime v procesu ze dany handle je volny - TODO: tohle mozna bude v thread_manageru
+                cur_thread->process->threads[target_thread->tid] =
+                    nullptr; // a nastavime v procesu ze dany handle je volny - TODO: tohle mozna bude v thread_manageru
                 cur_thread->process->thread_count--;
             }
 
             break;
         }
 
-        case NSWI_Thread_Service::Exit_Thread: 
-            cur_thread->state = NThread_State::Zombie; // deklarujeme ze je zombie 
-            cur_thread->exit_code = r0; // natavime exit code
+        case NSWI_Thread_Service::Exit_Thread:
+            cur_thread->state = NThread_State::Zombie; // deklarujeme ze je zombie
+            cur_thread->exit_code = r0;                // natavime exit code
 
-            // vypoctu si adresu stackove stranky v process-prostoru. Jelikoz jsme sem skocili z programu (volanim), tak stack vlakna nebude nikdy prazdny, nemuze se stat ze by tohle vyhodilo adresu stranky o jedna vyssi
+            // vypoctu si adresu stackove stranky v process-prostoru. Jelikoz jsme sem skocili z programu (volanim), tak stack vlakna nebude nikdy prazdny,
+            // nemuze se stat ze by tohle vyhodilo adresu stranky o jedna vyssi
             uint32_t stack_page_virt = (cur_thread->cpu_context.sp / PT_Region_Size) * PT_Region_Size;
             // vypoctu si pointer na page table a odmapuju stack
-            uint32_t* pt = reinterpret_cast<uint32_t*>((cur_thread->cpu_context.ttbr0 & ~(TTBR_Flags::Inner_Cacheable | TTBR_Flags::Shared)) + mem::MemoryVirtualBase);
+            uint32_t* pt =
+                reinterpret_cast<uint32_t*>((cur_thread->cpu_context.ttbr0 & ~(TTBR_Flags::Inner_Cacheable | TTBR_Flags::Shared)) + mem::MemoryVirtualBase);
             // vypoctu si adresu stackove stranky v kernel prostoru
             const uint32_t stack_page_kernel_virt = (pt[stack_page_virt / PT_Region_Size] & 0xFFF00000) + mem::MemoryVirtualBase;
             // odmapovavam z page table processu - potrebuji adresu v process prostoru
@@ -243,7 +245,7 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
 
             // Page table dealokuje terminate
 
-            for (TThread_Struct* thread : cur_thread->process->threads) { //projedeme vsechny vlakna, ktera jsou zablokovana nad "my.join()"
+            for (TThread_Struct* thread : cur_thread->process->threads) { // projedeme vsechny vlakna, ktera jsou zablokovana nad "my.join()"
                 if (thread->state == NThread_State::Blocked_on_Join && thread->blocked_on_tid == cur_thread->tid) {
                     thread->state = NThread_State::Runnable; // a odblokujeme je
                 }
@@ -254,12 +256,7 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             sScheduler.Schedule();
 
             break;
-        
     }
 }
 
-
-TThread_List_Node* CThread_Manager::Get_Thread_List_Head(){
-
-    return mThread_List_Head;
-};
+TThread_List_Node* CThread_Manager::Get_Thread_List_Head() { return mThread_List_Head; };

@@ -1,37 +1,29 @@
-//#include <cstdint>
-#include <process/process_manager.h>
-#include <process/process.h>
-#include <process/resource_manager.h>
+// #include <cstdint>
 #include <process/elf_loader.h>
+#include <process/process.h>
+#include <process/process_manager.h>
+#include <process/resource_manager.h>
 #include <process/scheduler.h>
-#include <process/thread_manager.h>
 #include <process/thread.h>
-
+#include <process/thread_manager.h>
 
 #include <memory/kernel_heap.h>
-#include <memory/pages.h>
 #include <memory/memmap.h>
 #include <memory/mmu.h>
+#include <memory/pages.h>
 #include <memory/pt_alloc.h>
 
 #include <fs/filesystem.h>
 
-#include <drivers/uart.h>
 #include <drivers/timer.h>
-
-
+#include <drivers/uart.h>
 
 CProcess_Manager sProcessMgr;
 CThread_Manager sThreadMgr;
 
-CProcess_Manager::CProcess_Manager()
-    : mLast_PID(0), mProcess_List_Head(nullptr), mCurrent_Process_Node(nullptr) {
-}
+CProcess_Manager::CProcess_Manager() : mLast_PID(0), mProcess_List_Head(nullptr), mCurrent_Process_Node(nullptr) {}
 
-TProcess_Struct* CProcess_Manager::Get_Current_Process() const {
-    return mCurrent_Process_Node ? mCurrent_Process_Node->process : nullptr;
-}
-
+TProcess_Struct* CProcess_Manager::Get_Current_Process() const { return mCurrent_Process_Node ? mCurrent_Process_Node->process : nullptr; }
 
 CProcess_List_Node* CProcess_Manager::Get_Process_Node_By_PID(uint32_t pid) const {
     CProcess_List_Node* node = mProcess_List_Head;
@@ -54,32 +46,30 @@ TProcess_Struct* CProcess_Manager::Get_Process_By_PID(uint32_t pid) const {
     return node->process;
 }
 
-
 bool CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file) {
     TProcess_Struct* process = Get_Process_By_PID(pid);
-    if (!process){
+    if (!process) {
         return false;
     }
 
     // najdeme index otevreneho souboru
     uint32_t handle_index = 0;
-    for (handle_index = 0; handle_index < Max_Process_Opened_Files; ++handle_index){
-        if(process->opened_files[handle_index] == notifier_file){
+    for (handle_index = 0; handle_index < Max_Process_Opened_Files; ++handle_index) {
+        if (process->opened_files[handle_index] == notifier_file) {
             break;
         }
-    } 
-
-    if(handle_index == Max_Process_Opened_Files){
-        // tohle by nemelo nastat pokud kernel funguje spravne
-        return false; 
     }
-    
+
+    if (handle_index == Max_Process_Opened_Files) {
+        // tohle by nemelo nastat pokud kernel funguje spravne
+        return false;
+    }
 
     // postupne vzbudime vsechny vlakna ktere cekaji nad danym souborem
     bool notified_some;
-    for (TThread_Struct* thread :process->threads){
-        if(thread->multi_wait_fd_bitmap & 1 << handle_index){
-            if(thread->is_multi_file_wait){
+    for (TThread_Struct* thread : process->threads) {
+        if (thread->multi_wait_fd_bitmap & 1 << handle_index) {
+            if (thread->is_multi_file_wait) {
                 thread->multi_wait_ready_fd = handle_index;
             }
             notified_some |= sThread_Manager.Notify_Thread(thread);
@@ -88,8 +78,6 @@ bool CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file) {
 
     return notified_some;
 }
-
-
 
 uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system) {
     CProcess_List_Node* procnode = sKernelMem.Alloc<CProcess_List_Node>();
@@ -107,19 +95,21 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     // alokace pameti pro process data
     procnode->process = sKernelMem.Alloc<TProcess_Struct>();
     auto* process = procnode->process;
-    //nastaveni process data
+    // nastaveni process data
     process->pid = ++mLast_PID;
-    process->sched_static_priority = 5;    // xTODO: pro ted je to jen hardcoded hodnota, do budoucna urcite bude nutne dovolit specifikovat - by se mohlo proste predavat jako argument funkce...
+    process->sched_static_priority = 5; // xTODO: pro ted je to jen hardcoded hodnota, do budoucna urcite bude nutne dovolit specifikovat - by se mohlo proste
+                                        // predavat jako argument funkce...
     process->page_count = 0;
 
     /* DTODO: - co by se tu melo dit - DONE
-        - volam zakladani prvniho threadu - asi funkce "create first thread", ktera bude volat "create thread", ktera bude volana handlerem neceho jako "pthread_create()"
-        - inkrementovat pocitadlo threadu, dat do seznamu threadu prvni thread 
+        - volam zakladani prvniho threadu - asi funkce "create first thread", ktera bude volat "create thread", ktera bude volana handlerem neceho jako
+       "pthread_create()"
+        - inkrementovat pocitadlo threadu, dat do seznamu threadu prvni thread
     */
     // nullpointery na vsechna vlakna - zakladat se da jenom tam kde je nullpointer (hlida thread manager)
     for (uint32_t i = 0; i < Max_Process_Threads; i++) {
         process->threads[i] = nullptr;
-    } 
+    }
 
     // zalozime prvni vlakno procesu
     if (sThreadMgr.Create_First_Thread(process, elf_file_data, elf_file_length, is_system) == Invalid_TID) {
@@ -128,7 +118,6 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
         sKernelMem.Free(procnode);
         return Invalid_PID;
     }
-
 
     /* DTODO: tyhle veci se budou zakladat v threadu
     - dedime od processu
@@ -144,7 +133,7 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     process->deadline = Indefinite; // process si zatim nestanovil deadline, udela to az to bude aktualni v deadline syscallu
     process->notified_deadline = Indefinite;
     process->page_count = 0;
-    
+
 
     // lr = co zacit vykonavat po bootstrapu, 0x8000 je misto, kam je relokovany v kazde nasi binarce symbol _start, tedy vstupni bod programu
     //process->cpu_context.lr = 0x8000;
@@ -161,13 +150,14 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     uint32_t code_page_phys = static_cast<unsigned long>(sPage_Manager.Alloc_Page()) - mem::MemoryVirtualBase;
     uint32_t stack_page_phys = static_cast<unsigned long>(sPage_Manager.Alloc_Page()) - mem::MemoryVirtualBase;
     process->page_count += 2;
-    
+
     // alokujeme tabulku stranek procesu z poolu
     uint32_t* pt = sPT_Alloc.Alloc();
 
     // zkopirujeme zakladni kernelovou tabulku - to proto, aby zustalo mapovani 0xFxxxxxxx a 0xCxxxxxxx adres (kod a data) a mohli jsme vykonavat
     // napr. obsluhu systemoveho volani beze zmeny adresniho prostoru
-    // pozn.: tohle kopirovani se da odbourat korektnim pouzitim TTBR1 - pak by TTBR1 prekladal vse napr. od 0x8xxxxxxx vyse a TTBR0 by zustal pro spodni cast adr. rozsahu
+    // pozn.: tohle kopirovani se da odbourat korektnim pouzitim TTBR1 - pak by TTBR1 prekladal vse napr. od 0x8xxxxxxx vyse a TTBR0 by zustal pro spodni cast
+    adr. rozsahu
     //        pro jednoduchost ted nechme takto, dvojice bazovych registru pro tabulky stranek jsou spise specialita ARMu a pribuznych procesoru
     copy_kernel_page_table_to(pt);
 
@@ -177,8 +167,8 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     map_memory(pt, stack_page_phys, 0x90000000);
 
     // nakopirujeme kod do kodove stranky, vysledkem nacitani je i PC vstupniho bodu procesu
-    const uint32_t elf_pc = CELF_Loader::Load_ELF32_Image(elf_file_data, reinterpret_cast<unsigned char*>(code_page_phys) + mem::MemoryVirtualBase, mem::PageSize);
-    if (elf_pc == CELF_Loader::Invalid_Entry_Point) {
+    const uint32_t elf_pc = CELF_Loader::Load_ELF32_Image(elf_file_data, reinterpret_cast<unsigned char*>(code_page_phys) + mem::MemoryVirtualBase,
+    mem::PageSize); if (elf_pc == CELF_Loader::Invalid_Entry_Point) {
         // pokud se nepodarilo nacteni, uvolnime alokovane zdroje a vratime chybu
         sPT_Alloc.Free(pt);
         sPage_Manager.Free_Page(code_page_phys + mem::MemoryVirtualBase);
@@ -191,19 +181,16 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     // nastavime PC procesu na vstupni bod programu, ktery jsme nacetli z ELF souboru
     process->cpu_context.lr = elf_pc;
 
-    // nastavime ulozene TTBR0 procesu - tady musi byt fyzicka adresa, proto odecitame bazi (vsechny fyzicke adresy jsou v kernelovem modu mapovany na "0xC0000000 + offset")
-    process->cpu_context.ttbr0 = (reinterpret_cast<unsigned long>(pt) - mem::MemoryVirtualBase)
-        | TTBR_Flags::Inner_Cacheable
-        | TTBR_Flags::Shared;
+    // nastavime ulozene TTBR0 procesu - tady musi byt fyzicka adresa, proto odecitame bazi (vsechny fyzicke adresy jsou v kernelovem modu mapovany na
+    "0xC0000000 + offset") process->cpu_context.ttbr0 = (reinterpret_cast<unsigned long>(pt) - mem::MemoryVirtualBase) | TTBR_Flags::Inner_Cacheable |
+    TTBR_Flags::Shared;
     */
 
     // nullpointery na otevrene soubory
     for (uint32_t i = 0; i < Max_Process_Opened_Files; i++) {
         process->opened_files[i] = nullptr;
     }
-    
 
-    
     return process->pid;
 }
 
@@ -216,9 +203,9 @@ uint32_t CProcess_Manager::Map_File_To_Current(IFile* file) {
     }
 
     // najdeme volny slot, pokud je
-    bool slot_in_use_by_waiting_thread = false; // jestli nad vybranym prazdnym file handlem nekdo ceka
+    bool slot_in_use_by_waiting_thread = false;               // jestli nad vybranym prazdnym file handlem nekdo ceka
     for (uint32_t i = 0; i < Max_Process_Opened_Files; i++) { // kontrolujeme vsechny volne sloty
-        if (current->opened_files[i] == nullptr) { // pokud je volny slot
+        if (current->opened_files[i] == nullptr) {            // pokud je volny slot
             for (TThread_Struct* thread : current->threads) { // tak musime u vsech vlaken zkontrolovat jestli nad nim necekaji (koncept dead-wait)
                 if (thread->multi_wait_fd_bitmap & 1 << i) {
                     slot_in_use_by_waiting_thread = true;
@@ -229,7 +216,7 @@ uint32_t CProcess_Manager::Map_File_To_Current(IFile* file) {
                 current->opened_files[i] = file;
                 return i;
             }
-            slot_in_use_by_waiting_thread = false; // pokud nad nim nekdo ceka tak vyresetujeme promennou a jdeme na dalsi file handle 
+            slot_in_use_by_waiting_thread = false; // pokud nad nim nekdo ceka tak vyresetujeme promennou a jdeme na dalsi file handle
         }
     }
 
@@ -247,21 +234,19 @@ bool CProcess_Manager::Unmap_File_Current(uint32_t handle) {
         return false;
     }
     // posleme vsem vlaknum co na odmapovavany proces cekaji notify, aby se vzbudili (read jim vrati neplatnou hodnotu)
-    Notify_Process(current->pid, current->opened_files[handle]); //navratovou hodnotu nepotrebujeme
-    current->opened_files[handle] = nullptr; // a pak muzeme soubor odmapovat
-    
+    Notify_Process(current->pid, current->opened_files[handle]); // navratovou hodnotu nepotrebujeme
+    current->opened_files[handle] = nullptr;                     // a pak muzeme soubor odmapovat
+
     // reseni implementovano
     // xTODO: bude treba resit kdyz ruzne threads na soubor cekaji,
-    // ted se tohle stalo jen kdyz proces bezel a zavolal close, 
+    // ted se tohle stalo jen kdyz proces bezel a zavolal close,
     // handle se invalidovalo a pak uz nemohl nad nim cekat, ale ted muze close
     // zavolat jakekoli vlakno a tim padem ostatni kdo cekaji se musi vzbudit.
-    // Co kdyz se mezitim nez se thread vzbudi na handle namapuje jiny soubor a tedy 
+    // Co kdyz se mezitim nez se thread vzbudi na handle namapuje jiny soubor a tedy
     // jinemu thread se zmeni soubor na ktery ceka aniz by to vedel?
-    // Nebo spise kazde vlakno ma svou bitmap s otevrenymi files a soubor ho 
-    // zavre jen kdyz uz zadne z vlaken nema soubor otevreny a pak by se tohle muselo 
+    // Nebo spise kazde vlakno ma svou bitmap s otevrenymi files a soubor ho
+    // zavre jen kdyz uz zadne z vlaken nema soubor otevreny a pak by se tohle muselo
     // o level vyse v Handle_xxx_SWI
-
-    
 
     return true;
 }
@@ -279,13 +264,10 @@ void CProcess_Manager::Close_All_Files(TProcess_Struct* process) {
     }
 }
 
-
-
-
 // dTODO: kam patri tohle
 // Zustane to tady, mame pristup do scheduleru ze ktereho si kdyztak vyzvedneme soucasne vlakno, kdyby bylo potreba
 void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target) {
-    
+
     TProcess_Struct* cur_process = Get_Current_Process();
     // xTODO: signalizace chyby
     if (!cur_process) {
@@ -357,7 +339,7 @@ void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, ui
             break;
         }
         case NSWI_Filesystem_Service::Wait: {
-            auto* cur_thread = sScheduler.Get_Current_Thread(); //v pripade wait musime zjistit ktere vlakno vola
+            auto* cur_thread = sScheduler.Get_Current_Thread(); // v pripade wait musime zjistit ktere vlakno vola
 
             if (r0 > Max_Process_Opened_Files || !cur_process->opened_files[r0]) {
                 return;
@@ -376,8 +358,7 @@ void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, ui
             cur_thread->notified_deadline = Deadline_Unchanged;
             break;
         }
-        case NSWI_Filesystem_Service::WaitAll:
-        {
+        case NSWI_Filesystem_Service::WaitAll: {
             Handle_WaitAll_SWI(r0, r1, r2, target);
             break;
         }
@@ -386,18 +367,17 @@ void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, ui
 
 // dTODO: TThread_struct misto TTask_Struct, jinak by mohlo fungovat stejne
 // jinak tohle mooozna by mohlo byt v thread manageru, ale jako nevim no, tyka se to procesu i vlakna
-void CProcess_Manager::Handle_WaitAll_SWI(uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result &target)
-{
+void CProcess_Manager::Handle_WaitAll_SWI(uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target) {
     target.r0 = Invalid_Handle;
 
-    uint32_t *handles = reinterpret_cast<uint32_t *>(r0);
+    uint32_t* handles = reinterpret_cast<uint32_t*>(r0);
     uint32_t handle_count = r1;
 
     if (handle_count == 0 || handles == nullptr) {
         return;
     }
 
-    TProcess_Struct *cur_process = Get_Current_Process();
+    TProcess_Struct* cur_process = Get_Current_Process();
 
     for (uint32_t i = 0; i < handle_count; i++) {
         if (handles[i] >= Max_Process_Opened_Files || !cur_process->opened_files[handles[i]]) {
@@ -405,8 +385,7 @@ void CProcess_Manager::Handle_WaitAll_SWI(uint32_t r0, uint32_t r1, uint32_t r2,
         }
     }
 
-    
-    auto* cur_thread = sScheduler.Get_Current_Thread(); 
+    auto* cur_thread = sScheduler.Get_Current_Thread();
     // nastaveni deadline, kdyby nahodou nejaky soubor uz byl ready - nastavujeme pro vlakno, ktere zavolalo tento syscall
     cur_thread->notified_deadline = r2;
     if (r2 != Deadline_Unchanged) {
@@ -434,7 +413,7 @@ void CProcess_Manager::Handle_WaitAll_SWI(uint32_t r0, uint32_t r1, uint32_t r2,
 
     bool file_ready = false;
     while (!file_ready) {
-        sScheduler.Block_Current_Thread(); 
+        sScheduler.Block_Current_Thread();
 
         // pokusime se po probuzeni ziskat resource od probouzejiciho souboru, a pokud se to povede, smycka skonci
         if (cur_thread->multi_wait_ready_fd != Invalid_Handle && cur_process->opened_files[cur_thread->multi_wait_ready_fd]->Wait_All_Acquire(1)) {
@@ -461,7 +440,6 @@ void CProcess_Manager::Handle_WaitAll_SWI(uint32_t r0, uint32_t r1, uint32_t r2,
     cur_thread->notified_deadline = Deadline_Unchanged;
 }
 
-
 uint32_t CProcess_Manager::Get_Page_Count() {
     CProcess_List_Node* node = mProcess_List_Head;
     uint32_t c = 0;
@@ -478,7 +456,8 @@ uint32_t CProcess_Manager::Get_File_Count() {
     uint32_t c = 0;
     while (node != nullptr) {
         for (int i = 0; i < Max_Process_Opened_Files; i++) {
-            if (node->process->opened_files[i] != nullptr) c++;
+            if (node->process->opened_files[i] != nullptr)
+                c++;
         }
         node = node->next;
     }
