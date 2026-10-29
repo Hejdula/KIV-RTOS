@@ -29,10 +29,17 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
     }
 
     TThread_List_Node* threadnode = sKernelMem.Alloc<TThread_List_Node>();
+    if (!threadnode) {
+        return Invalid_TID; // Allocation failed
+    }
     threadnode->next = mThread_List_Head;
     threadnode->prev = nullptr;
-    mThread_List_Head->prev = threadnode;
+    if (mThread_List_Head) {
+        mThread_List_Head->prev = threadnode;
+    }
     mThread_List_Head = threadnode;
+
+    
 
 
     // alokujeme pamet pro vlakno

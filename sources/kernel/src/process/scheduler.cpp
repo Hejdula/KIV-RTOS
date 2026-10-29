@@ -106,7 +106,14 @@ void CScheduler::Block_Current_Thread() {
     Schedule();
 }
 
+
+
 void CScheduler::Schedule() {
+    // inicializace
+    if (!mCurrent_Thread) {
+        mCurrent_Thread_Node = sThread_Manager.Get_Thread_List_Head();
+        mCurrent_Thread = mCurrent_Thread_Node->thread;
+    }
 
     // projdeme vsechny uspane (sleep) procesy, zda je na case je vzbudit
     {
