@@ -1,3 +1,4 @@
+#include "process/process.h"
 #include <process/thread_manager.h>
 #include <process/process_manager.h>
 #include <process/scheduler.h>
@@ -17,7 +18,7 @@ extern "C" {
     void system_process_bootstrap();
 };
 
-inline TThread_Struct *CThread_Manager::Create_Thread()
+inline TThread_Struct *CThread_Manager::Alloc_Thread_Struct()
 {
     auto* newThread = sKernelMem.Alloc<TThread_Struct>();
 
@@ -29,7 +30,7 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
     }
 
     // alokujeme pamet pro vlakno
-    process->threads[0] = this->Create_Thread();
+    process->threads[0] = this->Alloc_Thread_Struct();
     // defaultni a implicitni hodnoty pro vlakno
     process->threads[0]->tid = 0; 
     process->threads[0]->state = NThread_State::New;
@@ -94,6 +95,14 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
     return process->threads[0]->tid;
 }
 
+
+uint32_t CThread_Manager::Create_Thread(TProcess_Struct *process, uint32_t func_addr){
+    // Vytvoreni thread struct
+    // alokovat stack pro vlakno
+    // first fit 
+    return 0;
+    // return TID;
+};
 
 bool CThread_Manager::Notify_Thread(TThread_Struct* thread) {
     if (!thread) {
@@ -175,7 +184,15 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
         }
         
         // TODO: implementovat
-        case NSWI_Thread_Service::Thread: 
+        case NSWI_Thread_Service::Thread:
+            if(cur_thread->process->thread_count < Max_Process_Threads){
+                r0 = 0;
+            }
+
+            // Vytvoreni thread struct
+            // alokovat stack pro vlakno
+            // nastavit cpu kontext - v r0 je adresa fce co se ma vykonat
+            // v r0 vratit TID (invalid_tid pokud vlakno neslo vytvorit? resp prekrocili jsme max_thread_cound nebo dosla pamet)
             break;
         
 
