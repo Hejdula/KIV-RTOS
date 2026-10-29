@@ -47,7 +47,7 @@ extern "C" int _kernel_main(void) {
     sInterruptCtl.Disable_Basic_IRQ(hal::IRQ_Basic_Source::Timer);
 
     // nastavime casovac - v callbacku se provadi planovani procesu
-    sTimer.Enable(Timer_Callback, 0x80, NTimer_Prescaler::Prescaler_1);
+    sTimer.Enable(Timer_Callback, 0x80, NTimer_Prescaler::Prescaler_256);
 
     // povolime IRQ casovace
     sInterruptCtl.Enable_Basic_IRQ(hal::IRQ_Basic_Source::Timer);

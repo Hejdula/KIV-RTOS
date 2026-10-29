@@ -28,8 +28,17 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
         return Invalid_TID; // pokud tam uz vlakno je tak jsme tuhle funkci zavolali omylem
     }
 
+    TThread_List_Node* threadnode = sKernelMem.Alloc<TThread_List_Node>();
+    threadnode->next = mThread_List_Head;
+    threadnode->prev = nullptr;
+    mThread_List_Head->prev = threadnode;
+    mThread_List_Head = threadnode;
+
+
     // alokujeme pamet pro vlakno
     process->threads[0] = this->Alloc_Thread_Struct();
+    // ulozime odkaz na vlakno do seznamu vlaken
+    threadnode->thread = process->threads[0];
     // defaultni a implicitni hodnoty pro vlakno
     process->threads[0]->tid = 0;
     process->threads[0]->state = NThread_State::New;
@@ -243,6 +252,31 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             sPage_Manager.Free_Page(stack_page_kernel_virt);
             cur_thread->process->page_count--;
 
+            // musime se jeste odhlasit ze seznamu vlaken
+            auto* list_node = mThread_List_Head;
+            while (list_node->thread != cur_thread)
+            {
+                list_node = list_node->next;
+                // ze v seznamu neni nepredpokladam, a kdyby nebyla tak mame praci hotovou
+                if (!list_node) {
+                    break;
+                }
+            }               
+            if (list_node) {
+                // pokud ma predchudce tak normalni operace, jinak odebirame thread list head!
+                if (list_node->prev) {
+                    list_node->prev->next = list_node->next;
+                } else {
+                    mThread_List_Head = list_node->next;
+                }
+                if (list_node->next) {
+                    list_node->next->prev = list_node->prev;
+                }
+                sKernelMem.Free(list_node);
+            }
+            
+
+
             // Page table dealokuje terminate
 
             for (TThread_Struct* thread : cur_thread->process->threads) { // projedeme vsechny vlakna, ktera jsou zablokovana nad "my.join()"
@@ -251,7 +285,7 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
                 }
             }
 
-            // TODO: pokud jsem posledni tak volam terminate?
+            // TODO: pokud jsem posledni thread procesu tak volam terminate?
 
             sScheduler.Schedule();
 

@@ -15,9 +15,11 @@ constexpr uint32_t Invalid_TID = static_cast<uint32_t>(-1);
 
 class CThread_Manager {
   private:
+    // seznam vsech SCHEDULOVATELNYCH vlaken (zombie vlakna se z nej sama odmazou)
     TThread_List_Node* mThread_List_Head;
     // zalozi prazdne vlakno (alokuje pamet)
     inline TThread_Struct* Alloc_Thread_Struct();
+    
 
   public:
     CThread_Manager() = default;

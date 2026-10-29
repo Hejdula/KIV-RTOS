@@ -88,6 +88,7 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     mProcess_List_Head->prev = procnode;
     mProcess_List_Head = procnode;
 
+    // TODO: je tohle k necemu?
     if (!mCurrent_Process_Node) {
         mCurrent_Process_Node = procnode;
     }
