@@ -13,8 +13,8 @@ void context_switch_first(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
 };
 
 CScheduler::CScheduler() : mCurrent_Thread(nullptr) {
-    // mSchedule_Fnc = &CScheduler::Schedule_RR;
-    mSchedule_Fnc = &CScheduler::Schedule_EDF;
+    mSchedule_Fnc = &CScheduler::Schedule_RR;
+    //mSchedule_Fnc = &CScheduler::Schedule_EDF;
 }
 
 TThread_List_Node* CScheduler::Schedule_RR() {
@@ -157,10 +157,11 @@ void CScheduler::Switch_To(TThread_List_Node* node) {
     mCurrent_Thread->sched_counter = 0;
 
     TCPU_Context* old = &mCurrent_Thread->cpu_context;
-    bool is_first_time = (mCurrent_Thread->state == NThread_State::New);
+
 
     // prehodime na novy proces, pridelime casova kvanta a nastavime proces do stavu Running
     mCurrent_Thread = node->thread;
+    bool is_first_time = (mCurrent_Thread->state == NThread_State::New);
     mCurrent_Thread_Node = node;
     // TODO: nastavit current process u process manageru
     // + zamyslet se kde by to melo byt, jestli tady ve scheduleru nebo to nechat v procesu

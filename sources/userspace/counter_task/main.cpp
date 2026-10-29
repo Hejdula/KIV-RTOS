@@ -14,9 +14,9 @@
  **/
 
 int main(int argc, char** argv) {
-    uint32_t display_file = open("DEV:segd", NFile_Open_Mode::Write_Only);
-    uint32_t switch1_file = open("DEV:gpio/4", NFile_Open_Mode::Read_Only);
-    uint32_t switch2_file = open("DEV:gpio/17", NFile_Open_Mode::Read_Only);
+    //uint32_t display_file = open("DEV:segd", NFile_Open_Mode::Write_Only);
+    //uint32_t switch1_file = open("DEV:gpio/4", NFile_Open_Mode::Read_Only);
+    //uint32_t switch2_file = open("DEV:gpio/17", NFile_Open_Mode::Read_Only);
 
     unsigned int counter = 0;
     bool fast = false;
@@ -27,10 +27,10 @@ int main(int argc, char** argv) {
     while (true) {
         char tmp = '0';
 
-        read(switch1_file, &tmp, 1);
+        //read(switch1_file, &tmp, 1);
         ascending = (tmp == '1');
 
-        read(switch2_file, &tmp, 1);
+        //read(switch2_file, &tmp, 1);
         fast = (tmp == '1');
 
         if (ascending) {
@@ -40,14 +40,14 @@ int main(int argc, char** argv) {
         }
 
         tmp = '0' + (counter % 10);
-        write(display_file, &tmp, 1);
+        //write(display_file, &tmp, 1);
 
         sleep(fast ? 0x400 : 0x1200, fast ? 0x1000 : 0x4000);
     }
 
-    close(display_file);
-    close(switch1_file);
-    close(switch2_file);
+    //close(display_file);
+    //close(switch1_file);
+    //close(switch2_file);
 
     return 0;
 }
