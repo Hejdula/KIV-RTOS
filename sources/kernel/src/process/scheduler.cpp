@@ -193,6 +193,7 @@ bool CScheduler::Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target) {
         }
         case NGet_Sched_Info_Type::Process_Summary: {
             // TODO: predelat aby to odpovidalo bud process summary, nebo rename na thread summary
+            // idealne udelat oboji at tu je process i thread summary, a pripojit do procfs summary
             TThread_List_Node* node = sThread_Manager.Get_Thread_List_Head();
             uint32_t procCnt = 0;
 

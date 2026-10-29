@@ -1,5 +1,7 @@
 #pragma once
 
+#include "process/scheduler.h"
+#include "process/thread.h"
 #include <drivers/gpio.h>
 #include <hal/peripherals.h>
 #include <memory/kernel_heap.h>
@@ -18,14 +20,14 @@ class CProcFS_Task_File : public IFile {
     protected:
         int mPID;
 
-        const char* Status_To_String(NTask_State state) {
+        const char* Status_To_String(NThread_State state) {
             switch (state) {
-                case NTask_State::New: return "new";
-                case NTask_State::Runnable:
-                case NTask_State::Running: return "runnable";
-                case NTask_State::Interruptable_Sleep: return "sleep";
-                case NTask_State::Blocked: return "blocked";
-                case NTask_State::Zombie: return "zombie";
+                case NThread_State::New: return "new";
+                case NThread_State::Runnable:
+                case NThread_State::Running: return "runnable";
+                case NThread_State::Interruptable_Sleep: return "sleep";
+                case NThread_State::Blocked: return "blocked";
+                case NThread_State::Zombie: return "zombie";
                 default: return "unknown";
             }
         }
@@ -63,12 +65,18 @@ class CProcFS_Task_File__Status : public CProcFS_Task_File {
         CProcFS_Task_File__Status(int pid) : CProcFS_Task_File(pid) {}
 
         virtual uint32_t Read(char* buffer, uint32_t num) override {
-            TProcess_Struct *task = sProcessMgr.Get_Process_By_PID(mPID);
-            if (!task) {
+            TProcess_Struct *proc = sProcessMgr.Get_Process_By_PID(mPID);
+            if (!proc) {
+                return 0;
+            }
+            
+            TThread_Struct* main_thread = proc->threads[0];
+            
+            if (!main_thread){
                 return 0;
             }
 
-            const char *state_str = Status_To_String(task->state);
+            const char *state_str = Status_To_String(main_thread->state);
 
             strncat(buffer, state_str, num);
             return strlen(buffer);
@@ -138,16 +146,22 @@ class CProcFS_Task_File__Summary : public CProcFS_Task_File {
         CProcFS_Task_File__Summary(int pid) : CProcFS_Task_File(pid) {}
 
         virtual uint32_t Read(char* buffer, uint32_t num) override {
-            TProcess_Struct *task = sProcessMgr.Get_Process_By_PID(mPID);
-            if (!task) {
+            TProcess_Struct *proc = sProcessMgr.Get_Process_By_PID(mPID);
+            if (!proc) {
                 return 0;
             }
 
-            const char *state_str = Status_To_String(task->state);
+            TThread_Struct* main_thread = proc->threads[0];
+            
+            if (!main_thread){
+                return 0;
+            }
+
+            const char *state_str = Status_To_String(main_thread->state);
 
             uint8_t f = 0;
             for (int i = 0; i < Max_Process_Opened_Files; i++) {
-                if (task->opened_files[i] != nullptr) {
+                if (proc->opened_files[i] != nullptr) {
                     f++;
                 }
             }
@@ -159,7 +173,7 @@ class CProcFS_Task_File__Summary : public CProcFS_Task_File {
             strncat(buffer, "\r\nopened files: ", num);
             itoa(f, buffer + strlen(buffer), 10);
             strncat(buffer, "\r\npage count: ", num);
-            itoa(task->page_count, buffer + strlen(buffer), 10);
+            itoa(proc->page_count, buffer + strlen(buffer), 10);
 
             return strlen(buffer);
         }
@@ -192,7 +206,7 @@ class CProcFS_Global_File__Scheduler final : public CProcFS_Global_File {
     public:
         virtual uint32_t Read(char* buffer, uint32_t num) override {
             CProcess_Summary_Info info;
-            sProcessMgr.Get_Scheduler_Info(NGet_Sched_Info_Type::Process_Summary, &info);
+            sScheduler.Get_Scheduler_Info(NGet_Sched_Info_Type::Process_Summary, &info);
 
             strncat(buffer, "runnable: ", num);
             itoa(info.running, buffer + strlen(buffer), 10);
@@ -213,7 +227,7 @@ class CProcFS_Global_File__Tasks final : public CProcFS_Global_File {
     public:
         virtual uint32_t Read(char* buffer, uint32_t num) override {
             CProcess_Summary_Info info;
-            sProcessMgr.Get_Scheduler_Info(NGet_Sched_Info_Type::Process_Summary, &info);
+            sScheduler.Get_Scheduler_Info(NGet_Sched_Info_Type::Process_Summary, &info);
 
             itoa(info.total, buffer, 10);
 
@@ -229,7 +243,7 @@ class CProcFS_Global_File__Ticks final : public CProcFS_Global_File {
     public:
         virtual uint32_t Read(char* buffer, uint32_t num) override {
             uint32_t ticks;
-            sProcessMgr.Get_Scheduler_Info(NGet_Sched_Info_Type::Tick_Count, &ticks);
+            sScheduler.Get_Scheduler_Info(NGet_Sched_Info_Type::Tick_Count, &ticks);
             itoa(ticks, buffer, 10);
 
             return strlen(buffer);
