@@ -5,3 +5,4 @@ build/*
 
 # personal VSCode workspaces
 KIV-RTOS.code-workspace
+uart_flasher
