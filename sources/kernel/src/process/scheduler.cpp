@@ -20,6 +20,11 @@ CScheduler::CScheduler() : mCurrent_Thread(nullptr) {
 TThread_List_Node* CScheduler::Schedule_RR() {
     // je nejaky proces naplanovany? pokud je ve stavu running, budeme snizovat citac, pokud ne, musime okamzite preplanovat
     if (mCurrent_Thread && mCurrent_Thread->state == NThread_State::Running) {
+        
+        if (mCurrent_Thread->sched_counter == 0) {
+            for(;;); //hang
+        }
+
         // snizime citac planovace
         mCurrent_Thread->sched_counter--;
         // pokud je citac vetsi nez 0, zatim nebudeme preplanovavat (a zaroven je proces stale ve stavu Running - nezablokoval se nad necim)
@@ -109,11 +114,11 @@ void CScheduler::Block_Current_Thread() {
 
 
 void CScheduler::Schedule() {
-    // inicializace
-    if (!mCurrent_Thread) {
+    // inicializace neni potreba, kdyztak ji dela planovac
+    /*if (!mCurrent_Thread) {
         mCurrent_Thread_Node = sThread_Manager.Get_Thread_List_Head();
         mCurrent_Thread = mCurrent_Thread_Node->thread;
-    }
+    }*/
 
     // projdeme vsechny uspane (sleep) procesy, zda je na case je vzbudit
     {
@@ -186,7 +191,7 @@ bool CScheduler::Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target) {
             TThread_List_Node* node = sThread_Manager.Get_Thread_List_Head();
             uint32_t procCnt = 0;
             while (node) {
-                if (node->thread->state == NThread_State::Running || node->thread->state == NThread_State::Runnable) {
+                if (node->thread->state == NThread_State::Running || node->thread->state == NThread_State::Runnable || node->thread->state == NThread_State::New ) {
                     procCnt++;
                 }
 

@@ -57,6 +57,7 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
     process->threads[0]->deadline = Indefinite;
     process->threads[0]->notified_deadline = Indefinite;
     process->threads[0]->blocked_on_tid = Invalid_TID;
+    process->threads[0]->process = process;
 
     // adpatace puvodniho kodu zakladani procesu
     // lr = co zacit vykonavat po bootstrapu, 0x8000 je misto, kam je relokovany v kazde nasi binarce symbol _start, tedy vstupni bod programu
