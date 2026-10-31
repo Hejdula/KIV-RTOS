@@ -101,6 +101,7 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     process->sched_static_priority = 5; // xTODO: pro ted je to jen hardcoded hodnota, do budoucna urcite bude nutne dovolit specifikovat - by se mohlo proste
                                         // predavat jako argument funkce...
     process->page_count = 0;
+    process->thread_count = 0;
 
     /* DTODO: - co by se tu melo dit - DONE
         - volam zakladani prvniho threadu - asi funkce "create first thread", ktera bude volat "create thread", ktera bude volana handlerem neceho jako

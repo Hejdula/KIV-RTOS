@@ -110,6 +110,7 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
     // "0xC0000000 + offset")
     process->ttbr0 = (reinterpret_cast<unsigned long>(pt) - mem::MemoryVirtualBase) | TTBR_Flags::Inner_Cacheable | TTBR_Flags::Shared;
     process->threads[0]->cpu_context.ttbr0 = process->ttbr0;
+    process->thread_count = 1;
 
     return process->threads[0]->tid;
 }
@@ -171,6 +172,8 @@ uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_
     new_thread->deadline = Indefinite;
     new_thread->notified_deadline = Indefinite;
     new_thread->blocked_on_tid = Invalid_TID;
+
+    process->thread_count++;
 
     return TID;
 };
@@ -256,13 +259,14 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
 
         // TODO: implementovat
         case NSWI_Thread_Service::Thread:
-            if (cur_thread->process->thread_count < Max_Process_Threads) {
-                r0 = Invalid_TID;
+            if (cur_thread->process->thread_count >= Max_Process_Threads) {
+                target.r0 = Invalid_TID;
                 break;
             }
 
-            r0 = Create_Thread(cur_thread->process, r0);
+            target.r0 = Create_Thread(cur_thread->process, r0);
             // v r0 vracime TID, muze byt invalid, thread se pak nepodarilo vytvorit
+            sScheduler.Schedule();
             break;
 
         case NSWI_Thread_Service::Join: {

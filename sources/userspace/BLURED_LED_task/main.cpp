@@ -43,7 +43,8 @@ int blu() {
 int main(int argc, char** argv) {
   uint32_t TID1 = thread((void*)red);
   uint32_t TID2 = thread((void*)blu);
+
   while(true){
-    //hang
+    sleep(0x40000); 
   }
 }
