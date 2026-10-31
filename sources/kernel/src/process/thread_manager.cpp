@@ -99,6 +99,14 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
         sPage_Manager.Free_Page(code_page_phys + mem::MemoryVirtualBase);
         sPage_Manager.Free_Page(stack_page_phys + mem::MemoryVirtualBase);
         sKernelMem.Free(process->threads[0]);
+
+        if (threadnode->next) {
+            this->mThread_List_Head = threadnode->next;
+            mThread_List_Head->prev = nullptr;
+        } else {
+            mThread_List_Head = nullptr;
+        }
+        sKernelMem.Free(threadnode);
         process->page_count -= 2;
         return Invalid_TID;
     }
@@ -119,7 +127,7 @@ uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_
     uint32_t TID = Invalid_TID;
     { // first fit available TID
         for (uint32_t i = 0; i < Max_Process_Threads; ++i) {
-            if (process->threads[i] != nullptr) {
+            if (process->threads[i] == nullptr) {
                 TID = i;
                 break;
             }
@@ -162,7 +170,7 @@ uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_
     // *new_thread = TThread_Struct{}; // this needs memset to be defined, would be nice for zeroing the structs
     new_thread->cpu_context = TCPU_Context{.lr = func_addr,
                                            .sp = stack_page_virtual + Stack_Size,
-                                           .pc = reinterpret_cast<uint32_t>(&user_process_bootstrap), // TODO: nevim jestli tohle dela co ma 
+                                           .pc = reinterpret_cast<uint32_t>(&user_process_bootstrap), // TODO: nevim jestli tohle dela co ma
                                            .ttbr0 = process->ttbr0};
     new_thread->process = process;
     new_thread->tid = TID;
