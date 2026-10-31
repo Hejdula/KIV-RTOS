@@ -13,8 +13,8 @@ void context_switch_first(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
 };
 
 CScheduler::CScheduler() : mCurrent_Thread(nullptr) {
-    mSchedule_Fnc = &CScheduler::Schedule_RR;
-    //mSchedule_Fnc = &CScheduler::Schedule_EDF;
+    //mSchedule_Fnc = &CScheduler::Schedule_RR;
+    mSchedule_Fnc = &CScheduler::Schedule_EDF;
 }
 
 TThread_List_Node* CScheduler::Schedule_RR() {
@@ -65,6 +65,9 @@ TThread_List_Node* CScheduler::Schedule_EDF() {
     TThread_List_Node* next = nullptr;
 
     // EDF = najdeme takovy proces, ktery je ve stavu Running nebo Runnable a ma deadline nejblizsi aktualni casove znacce
+
+    if (mCurrent_Thread_Node == nullptr) // inicializace kdyby se nam nahodou ztratil current thread node (ukoncil se a uklidil po sobe)
+        mCurrent_Thread_Node = sThread_Manager.Get_Thread_List_Head();
 
     TThread_List_Node* itr = mCurrent_Thread_Node;
     while (itr) {
