@@ -159,7 +159,7 @@ uint32_t get_task_ticks_to_deadline() {
     return ticks;
 }
 
-uint32_t thread(void* func){
+uint32_t thread(void (*func)()){
     uint32_t retcode;
 
     asm volatile("mov r0, %0" : : "r" (func));
