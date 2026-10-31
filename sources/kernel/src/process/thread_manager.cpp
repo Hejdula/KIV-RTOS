@@ -75,6 +75,7 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
 
     // alokujeme tabulku stranek procesu z poolu
     uint32_t* pt = sPT_Alloc.Alloc();
+    process->page_table = pt;
 
     // zkopirujeme zakladni kernelovou tabulku - to proto, aby zustalo mapovani 0xFxxxxxxx a 0xCxxxxxxx adres (kod a data) a mohli jsme vykonavat
     // napr. obsluhu systemoveho volani beze zmeny adresniho prostoru
@@ -128,15 +129,13 @@ uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_
         }
     }
 
-
-
     TThread_List_Node* threadnode = sKernelMem.Alloc<TThread_List_Node>();
     if (!threadnode) {
         return Invalid_TID; // Allocation failed
     }
 
     TThread_Struct* new_thread = Alloc_Thread_Struct();
-    if (!new_thread){
+    if (!new_thread) {
         sKernelMem.Free(threadnode);
         return Invalid_TID; // Allocation failed
     }
@@ -149,20 +148,17 @@ uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_
     }
     this->mThread_List_Head = threadnode;
 
-    
     threadnode->thread = new_thread;
     process->threads[TID] = new_thread;
 
     uint32_t stack_page_phys = static_cast<unsigned long>(sPage_Manager.Alloc_Page()) - mem::MemoryVirtualBase;
 
-    
-    // je treba z ttbr0 odmaskovat bity a posunout do virtualni pameti kernelu abychom se dostali k pameti kde je ulozena tabulka stranek
-    uint32_t* page_table = reinterpret_cast<uint32_t*>((process->ttbr0 & ~(TTBR_Flags::Inner_Cacheable | TTBR_Flags::Shared)) + mem::MemoryVirtualBase);
     // kde ve pameti bude stack, pred nim jsou stacky a guard vlaken s nizsim TIO a guard page tohoto stacku
-    uint32_t stack_page_virtual =  (Stack_Area_Virtual_Base + Stack_Guard_Size + (Stack_Size + Stack_Guard_Size) * TID);
+    uint32_t stack_page_virtual = (Stack_Area_Virtual_Base + Stack_Guard_Size + TID * (Stack_Size + Stack_Guard_Size));
     // namapujeme stack vlakna do tabulky stranek
-    map_memory(page_table, stack_page_phys, stack_page_virtual);
+    map_memory(process->page_table, stack_page_phys, stack_page_virtual);
 
+    // *new_thread = TThread_Struct{}; // this needs memset to be defined, would be nice for zeroing the structs
     new_thread->cpu_context = TCPU_Context{.lr = 0, // TODO: tady bude adresa thread-exit handleru
                                            .sp = stack_page_virtual + Stack_Size,
                                            .pc = func_addr,
@@ -175,7 +171,6 @@ uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_
     new_thread->deadline = Indefinite;
     new_thread->notified_deadline = Indefinite;
     new_thread->blocked_on_tid = Invalid_TID;
-    new_thread->multi_wait_fd_bitmap = 0;
 
     return TID;
 };

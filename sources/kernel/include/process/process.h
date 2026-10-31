@@ -30,10 +30,10 @@ struct TThread_Struct;
 // struktura procesu (tasku, ...)
 struct TProcess_Struct {
     // TCPU_Context cpu_context;                   // ulozeny kontext procesoru - misto toho v thread
-    unsigned int pid; // ID procesu, kladne nenulove cislo
+    uint32_t pid; // ID procesu, kladne nenulove cislo
     // NTask_State state;                          // stav procesu - misto toho v thread
     // unsigned int sched_counter;                 // pocitadlo - misto toho v thread
-    unsigned int sched_static_priority;            // staticka priorita procesu (dana pri jeho vytvareni)
+    uint32_t sched_static_priority;                // staticka priorita procesu (dana pri jeho vytvareni)
     IFile* opened_files[Max_Process_Opened_Files]; // otevrene soubory; index je zaroven handle, souborove veci jsou sdilene mezi vlakny, pro ne musime sahat do
                                                    // procesu
     // uint32_t multi_wait_fd_bitmap;              // bitmapa souboru, na ktere proces ceka pri WaitAll - cekani na vice souboru najednou
@@ -44,7 +44,8 @@ struct TProcess_Struct {
     //  maximalni podporovany rozsah cekani je 0x7FFFFFFF, jelikoz muze citac pretect; diference je vzdy pocitana i s moznosti preteceni
     // uint32_t deadline;                          // deadline dokonceni tasku
     // uint32_t notified_deadline;                 // deadline nastavena po nasledujicim probuzeni procesu
-    unsigned long ttbr0;
+    uint32_t* page_table;  // adresa tabulky stranek procesu ve virtualnim prostoru kernelu
+    unsigned long ttbr0;   // obsah registru pro nastaveni tabulky stranek procesu
     uint32_t page_count;   // pocet alokovanych stranek
     uint32_t thread_count; // pocet ZIVYCH vlaken - posledni vlakno nastavuje exit code, kdyz se rovna Max_Process_Threads tak TODO vyhodit chybu
     TThread_Struct* threads[Max_Process_Threads]; // seznam vsech vlaken procesu
