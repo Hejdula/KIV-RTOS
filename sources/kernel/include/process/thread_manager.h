@@ -1,9 +1,15 @@
 #pragma once
 #include <hal/intdef.h>
 
+#include "memory/memmap.h"
 #include "process.h"
 #include "swi.h"
 #include "thread.h"
+
+const uint32_t STACK_SIZE = mem::PageSize;
+const uint32_t STACK_GUARD_SIZE = mem::PageSize;
+const uint32_t STACK_AREA_VIRTUAL_BASE = 0x90000000;
+constexpr uint32_t STACKS_AREA_SIZE = (STACK_SIZE + STACK_GUARD_SIZE) * Max_Process_Threads;
 
 struct TThread_List_Node {
     TThread_List_Node* prev;
@@ -19,7 +25,6 @@ class CThread_Manager {
     TThread_List_Node* mThread_List_Head;
     // zalozi prazdne vlakno (alokuje pamet)
     inline TThread_Struct* Alloc_Thread_Struct();
-    
 
   public:
     CThread_Manager();

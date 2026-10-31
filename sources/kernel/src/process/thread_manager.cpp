@@ -7,9 +7,8 @@
 #include <memory/pt_alloc.h>
 #include <process/elf_loader.h>
 #include <process/process_manager.h>
-#include <process/thread_manager.h>
 #include <process/scheduler.h>
-
+#include <process/thread_manager.h>
 
 CThread_Manager sThread_Manager;
 
@@ -41,9 +40,6 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
         this->mThread_List_Head->prev = threadnode;
     }
     this->mThread_List_Head = threadnode;
-
-    
-
 
     // alokujeme pamet pro vlakno
     process->threads[0] = this->Alloc_Thread_Struct();
@@ -109,16 +105,43 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
 
     // nastavime ulozene TTBR0 procesu - tady musi byt fyzicka adresa, proto odecitame bazi (vsechny fyzicke adresy jsou v kernelovem modu mapovany na
     // "0xC0000000 + offset")
-    process->threads[0]->cpu_context.ttbr0 = (reinterpret_cast<unsigned long>(pt) - mem::MemoryVirtualBase) | TTBR_Flags::Inner_Cacheable | TTBR_Flags::Shared;
+
+    process->ttbr0 = (reinterpret_cast<unsigned long>(pt) - mem::MemoryVirtualBase) | TTBR_Flags::Inner_Cacheable | TTBR_Flags::Shared;
+    process->threads[0]->cpu_context.ttbr0 = process->ttbr0;
 
     return process->threads[0]->tid;
 }
 
 uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_addr) {
+    uint32_t TID = Invalid_TID;
+    { // first fit available TID
+        for (uint32_t i = 0; i < Max_Process_Threads; ++i) {
+            if (process->threads[i] != nullptr) {
+                TID = i;
+                break;
+            }
+        }
+
+        if (TID == Invalid_TID) {
+            return Invalid_TID;
+        }
+    }
+
+    TThread_Struct* new_thread = Alloc_Thread_Struct();
+    process->threads[TID] = new_thread;
+
+    new_thread->cpu_context = TCPU_Context{.lr = 0, // TODO: tady bude adresa thread-exit handleru
+                                           .sp = 0,
+                                           .pc = func_addr,
+                                           .ttbr0 = process->ttbr0};
+    new_thread->process = process;
+    new_thread->tid = TID;
+    new_thread->state = NThread_State::New;
+    new_thread->sched_counter = process->sched_static_priority;
+
     // Vytvoreni thread struct
-    // alokovat stack pro vlakno
-    // first fit
-    return 0;
+    // alokovat stack pro vlakno + pridat do process ttrb0
+    return TID;
     // return TID;
 };
 
@@ -204,13 +227,12 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
         // TODO: implementovat
         case NSWI_Thread_Service::Thread:
             if (cur_thread->process->thread_count < Max_Process_Threads) {
-                r0 = 0;
+                r0 = Invalid_TID;
+                break;
             }
 
-            // Vytvoreni thread struct
-            // alokovat stack pro vlakno
-            // nastavit cpu kontext - v r0 je adresa fce co se ma vykonat
-            // v r0 vratit TID (invalid_tid pokud vlakno neslo vytvorit? resp prekrocili jsme max_thread_cound nebo dosla pamet)
+            r0 = Create_Thread(cur_thread->process, r0);
+            // v r0 vracime TID, muze byt invalid, thread se pak nepodarilo vytvorit
             break;
 
         case NSWI_Thread_Service::Join: {
@@ -265,14 +287,13 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
 
             // musime se jeste odhlasit ze seznamu vlaken
             auto* list_node = mThread_List_Head;
-            while (list_node->thread != cur_thread)
-            {
+            while (list_node->thread != cur_thread) {
                 list_node = list_node->next;
                 // ze v seznamu neni nepredpokladam, a kdyby nebyla tak mame praci hotovou
                 if (!list_node) {
                     break;
                 }
-            }               
+            }
             if (list_node) {
                 // pokud ma predchudce tak normalni operace, jinak odebirame thread list head!
                 if (list_node->prev) {
@@ -285,8 +306,6 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
                 }
                 sKernelMem.Free(list_node);
             }
-            
-
 
             // Page table dealokuje terminate
 

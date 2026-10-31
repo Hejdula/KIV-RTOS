@@ -13,21 +13,6 @@ constexpr uint32_t Indefinite = static_cast<uint32_t>(-1);
 // hodnota, ktera znamena, ze procesu se nema menit deadline
 constexpr uint32_t Deadline_Unchanged = static_cast<uint32_t>(-2);
 
-
-
-#pragma pack(push, 1)
-
-// TODO tohle zmizi
-// kontext provadeni procesu z pohledu CPU - v podstate ulozene registry
-/*struct TCPU_Context {
-    unsigned long lr;
-    unsigned long sp;
-    unsigned long pc;
-    unsigned long ttbr0; 
-};*/
-
-#pragma pack(pop)
-
 class IFile;
 struct TThread_Struct;
 
@@ -47,6 +32,7 @@ struct TProcess_Struct {
                                                 // maximalni podporovany rozsah cekani je 0x7FFFFFFF, jelikoz muze citac pretect; diference je vzdy pocitana i s moznosti preteceni
     //uint32_t deadline;                          // deadline dokonceni tasku
     //uint32_t notified_deadline;                 // deadline nastavena po nasledujicim probuzeni procesu
+    unsigned long ttbr0;
     uint32_t page_count;                        // pocet alokovanych stranek
     uint32_t thread_count;                      // pocet ZIVYCH vlaken - posledni vlakno nastavuje exit code, kdyz se rovna Max_Process_Threads tak TODO vyhodit chybu
     TThread_Struct* threads[Max_Process_Threads];  //seznam vsech vlaken procesu

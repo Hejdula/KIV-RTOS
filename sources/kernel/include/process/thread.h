@@ -23,8 +23,8 @@ struct TCPU_Context {
     unsigned long lr;
     unsigned long sp;
     unsigned long pc;
-    unsigned long
-        ttbr0; // kazde vlakno ma svuj pointer na ttbr0, pri zakladani vlakna je do nej vlozena tabulka stranek. TODO: dle implementace vyjasnit comment
+    unsigned long ttbr0; // kazde vlakno ma svuj pointer na ttbr0, pri zakladani vlakna je do nej vlozena tabulka stranek.
+                         // TODO: dle implementace vyjasnit comment
 };
 
 #pragma pack(pop)
