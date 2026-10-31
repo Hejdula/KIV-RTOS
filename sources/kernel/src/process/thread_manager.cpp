@@ -162,7 +162,7 @@ uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_
     // *new_thread = TThread_Struct{}; // this needs memset to be defined, would be nice for zeroing the structs
     new_thread->cpu_context = TCPU_Context{.lr = func_addr,
                                            .sp = stack_page_virtual + Stack_Size,
-                                           .pc = reinterpret_cast<unsigned long>(&user_process_bootstrap),
+                                           .pc = reinterpret_cast<uint32_t>(&user_process_bootstrap), // TODO: nevim jestli tohle dela co ma 
                                            .ttbr0 = process->ttbr0};
     new_thread->process = process;
     new_thread->tid = TID;
