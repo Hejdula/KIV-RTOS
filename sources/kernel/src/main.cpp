@@ -34,6 +34,9 @@ extern "C" unsigned int __BLULED_task_elf_len;
 extern "C" unsigned char __REDLED_task_elf[];
 extern "C" unsigned int __REDLED_task_elf_len;
 
+extern "C" unsigned char __BLURED_LED_task_elf[];
+extern "C" unsigned int __BLURED_LED_task_elf_len;
+
 extern "C" int _kernel_main(void) {
     // inicializace souboroveho systemu
     sFilesystem.Initialize();
@@ -51,8 +54,10 @@ extern "C" int _kernel_main(void) {
     //sProcessMgr.Create_Process(__logger_task_elf, __logger_task_elf_len, false);
     //sProcessMgr.Create_Process(__tilt_task_elf, __tilt_task_elf_len, false);
 
-    sProcessMgr.Create_Process(__BLULED_task_elf, __BLULED_task_elf_len, false);
-    sProcessMgr.Create_Process(__REDLED_task_elf, __REDLED_task_elf_len, false);
+
+    sProcessMgr.Create_Process(__BLURED_LED_task_elf, __BLURED_LED_task_elf_len, false);
+    // sProcessMgr.Create_Process(__BLULED_task_elf, __BLULED_task_elf_len, false);
+    // sProcessMgr.Create_Process(__REDLED_task_elf, __REDLED_task_elf_len, false);
 
 
     // zatim zakazeme IRQ casovace

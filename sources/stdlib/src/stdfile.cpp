@@ -159,6 +159,16 @@ uint32_t get_task_ticks_to_deadline() {
     return ticks;
 }
 
+uint32_t thread(void* func){
+    uint32_t retcode;
+
+    asm volatile("mov r0, %0" : : "r" (func));
+    asm volatile("swi 7");
+    asm volatile("mov %0, r0" : "=r" (retcode));
+    
+    return retcode;
+}
+
 const char Pipe_File_Prefix[] = "SYS:pipe/";
 
 uint32_t pipe(const char* name, uint32_t buf_size) {
