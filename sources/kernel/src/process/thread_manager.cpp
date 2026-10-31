@@ -66,7 +66,7 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
         is_system ? reinterpret_cast<unsigned long>(&system_process_bootstrap) : reinterpret_cast<unsigned long>(&user_process_bootstrap);
     // sp = zasobnik, vzdy je relokovany na nejakou fixni pamet, pro nas je jednoduche volit ho o velikosti 1MB
     // pozn. zasobnik roste na druhou stranu, takze musime SP nastavit na konec stranky
-    process->threads[0]->cpu_context.sp = 0x90000000 + mem::PageSize;
+    process->threads[0]->cpu_context.sp = Stack_Area_Virtual_Base + Stack_Guard_Size + Stack_Size;
 
     // alokujeme stranku pro kod a pro zasobnik
     uint32_t code_page_phys = static_cast<unsigned long>(sPage_Manager.Alloc_Page()) - mem::MemoryVirtualBase;
@@ -164,7 +164,7 @@ uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_
     map_memory(page_table, stack_page_phys, stack_page_virtual);
 
     new_thread->cpu_context = TCPU_Context{.lr = 0, // TODO: tady bude adresa thread-exit handleru
-                                           .sp = stack_page_virtual,
+                                           .sp = stack_page_virtual + Stack_Size,
                                            .pc = func_addr,
                                            .ttbr0 = process->ttbr0};
     new_thread->process = process;
