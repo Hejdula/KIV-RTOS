@@ -160,9 +160,9 @@ uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_
     map_memory(process->page_table, stack_page_phys, stack_page_virtual);
 
     // *new_thread = TThread_Struct{}; // this needs memset to be defined, would be nice for zeroing the structs
-    new_thread->cpu_context = TCPU_Context{.lr = 0, // TODO: tady bude adresa thread-exit handleru
+    new_thread->cpu_context = TCPU_Context{.lr = func_addr,
                                            .sp = stack_page_virtual + Stack_Size,
-                                           .pc = func_addr,
+                                           .pc = reinterpret_cast<unsigned long>(&user_process_bootstrap),
                                            .ttbr0 = process->ttbr0};
     new_thread->process = process;
     new_thread->tid = TID;
