@@ -1,4 +1,5 @@
 #include "process/process.h"
+#include "process/thread.h"
 #include <drivers/timer.h>
 #include <memory/kernel_heap.h>
 #include <memory/memmap.h>
@@ -84,8 +85,9 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
 
     // namapujeme kodovou stranku na zacatek virtualni pameti
     map_memory(pt, code_page_phys, 0x00000000);
-    // namapujeme zasobnik na 0x90000000
-    map_memory(pt, stack_page_phys, 0x90000000);
+    // namapujeme zasobnik na virtualni adresu prostory pro stacky,
+    // posunuty zacatek o guard jelikoz stack roste dolu a guard je tedy na nizsi adrese pred nim.
+    map_memory(pt, stack_page_phys, Stack_Area_Virtual_Base + Stack_Guard_Size);
 
     // nakopirujeme kod do kodove stranky, vysledkem nacitani je i PC vstupniho bodu procesu
     const uint32_t elf_pc =
@@ -105,7 +107,6 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
 
     // nastavime ulozene TTBR0 procesu - tady musi byt fyzicka adresa, proto odecitame bazi (vsechny fyzicke adresy jsou v kernelovem modu mapovany na
     // "0xC0000000 + offset")
-
     process->ttbr0 = (reinterpret_cast<unsigned long>(pt) - mem::MemoryVirtualBase) | TTBR_Flags::Inner_Cacheable | TTBR_Flags::Shared;
     process->threads[0]->cpu_context.ttbr0 = process->ttbr0;
 
@@ -127,22 +128,56 @@ uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_
         }
     }
 
+
+
+    TThread_List_Node* threadnode = sKernelMem.Alloc<TThread_List_Node>();
+    if (!threadnode) {
+        return Invalid_TID; // Allocation failed
+    }
+
     TThread_Struct* new_thread = Alloc_Thread_Struct();
+    if (!new_thread){
+        sKernelMem.Free(threadnode);
+        return Invalid_TID; // Allocation failed
+    }
+
+    // zaradit do listu TThread_Struct
+    threadnode->next = this->mThread_List_Head;
+    threadnode->prev = nullptr;
+    if (this->mThread_List_Head) {
+        this->mThread_List_Head->prev = threadnode;
+    }
+    this->mThread_List_Head = threadnode;
+
+    
+    threadnode->thread = new_thread;
     process->threads[TID] = new_thread;
 
+    uint32_t stack_page_phys = static_cast<unsigned long>(sPage_Manager.Alloc_Page()) - mem::MemoryVirtualBase;
+
+    
+    // je treba z ttbr0 odmaskovat bity a posunout do virtualni pameti kernelu abychom se dostali k pameti kde je ulozena tabulka stranek
+    uint32_t* page_table = reinterpret_cast<uint32_t*>((process->ttbr0 & ~(TTBR_Flags::Inner_Cacheable | TTBR_Flags::Shared)) + mem::MemoryVirtualBase);
+    // kde ve pameti bude stack, pred nim jsou stacky a guard vlaken s nizsim TIO a guard page tohoto stacku
+    uint32_t stack_page_virtual =  (Stack_Area_Virtual_Base + Stack_Guard_Size + (Stack_Size + Stack_Guard_Size) * TID);
+    // namapujeme stack vlakna do tabulky stranek
+    map_memory(page_table, stack_page_phys, stack_page_virtual);
+
     new_thread->cpu_context = TCPU_Context{.lr = 0, // TODO: tady bude adresa thread-exit handleru
-                                           .sp = 0,
+                                           .sp = stack_page_virtual,
                                            .pc = func_addr,
                                            .ttbr0 = process->ttbr0};
     new_thread->process = process;
     new_thread->tid = TID;
     new_thread->state = NThread_State::New;
     new_thread->sched_counter = process->sched_static_priority;
+    new_thread->is_multi_file_wait = false;
+    new_thread->deadline = Indefinite;
+    new_thread->notified_deadline = Indefinite;
+    new_thread->blocked_on_tid = Invalid_TID;
+    new_thread->multi_wait_fd_bitmap = 0;
 
-    // Vytvoreni thread struct
-    // alokovat stack pro vlakno + pridat do process ttrb0
     return TID;
-    // return TID;
 };
 
 bool CThread_Manager::Notify_Thread(TThread_Struct* thread) {

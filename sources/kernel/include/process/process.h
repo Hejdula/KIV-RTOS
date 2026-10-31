@@ -3,6 +3,10 @@
 #include "memory/memmap.h"
 #include <hal/intdef.h>
 
+// namespace proc{
+//     // TODO: pro rozsiritelnost a prehlednost by davalo smysl mit globals ve scope
+// }
+
 // maximalni pocet otevrenych souboru
 constexpr uint32_t Max_Process_Opened_Files = 16;
 // maximalni pocet vlaken
