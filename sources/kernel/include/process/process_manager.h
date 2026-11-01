@@ -37,19 +37,9 @@ struct CProcess_List_Node {
 
 class CProcess_Manager {
   private:
-    // posledni pridelene PID
-    uint32_t mLast_PID;
-
-    // uvodni uzel spojoveho seznamu procesu
-    CProcess_List_Node* mProcess_List_Head;
-
-    // CProcess_List_Node* mCurrent_Task_Node;
-    // TODO: k prave bezicimu 'tasku' se pristupovalo pomoci mCurrent_Task_Node,
-    // budou se planovat vlakna a bylo by vhodne rozdelit na mCurrent_Thread(ve scheduleru) a mCurrent_Process_Node
-    // na mCurrent_Task_Node je aktualne 50+ referenci, tak tohle bude treba projit jedno po druhem
-
-    // uzel procesu prave beziciho vlakna
-    CProcess_List_Node* mCurrent_Process_Node;
+    uint32_t mLast_PID;                        // posledni pridelene PID
+    CProcess_List_Node* mProcess_List_Head;    // uvodni uzel spojoveho seznamu procesu
+    CProcess_List_Node* mCurrent_Process_Node; // uzel procesu prave beziciho vlakna
 
   private:
   protected:
@@ -58,6 +48,9 @@ class CProcess_Manager {
 
     // vytvori proces, ktery bude vykonavat zadanou funkci, vraci jeho PID; volitelne muze jit o systemovy proces
     uint32_t Create_Process(unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system);
+
+    // ukonci proces, nastavi ho jako zombie, ukonci vsechny jeho vlakna, zavre soubory, 
+    void Terminate_Process(TProcess_Struct *proc);
 
     // vrati strukturu procesu, ktery je v tento moment naplanovan
     TProcess_Struct* Get_Current_Process() const;
