@@ -68,7 +68,7 @@ class CProcess_Manager {
     // vrati strukturu procesu se zadanym PID, nebo nullptr, pokud proces neexistuje
     TProcess_Struct* Get_Process_By_PID(uint32_t pid) const;
 
-    // notifikuje blokovany proces (napr. spici nad mutexem, souborem, ...)
+    // notifikuje vsechna vlakna blokovaneho procesu spici nad necim (napr. spici nad mutexem, souborem, ...)
     bool Notify_Process(uint32_t pid, IFile* notifier_file);
 
     // namapuje otevreny soubor na handle

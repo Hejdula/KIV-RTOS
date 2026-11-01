@@ -204,6 +204,35 @@ bool CThread_Manager::Notify_Thread(TThread_Struct* thread) {
     return true;
 }
 
+bool CThread_Manager::Notify_Thread(PIDTID pidtid, IFile* notifier_file) { 
+    auto* thread = Get_Thread_By_PIDTID(pidtid);
+    if (!thread) {
+        return false;
+    }
+
+    // najdeme index otevreneho souboru
+    uint32_t handle_index = 0;
+    for (handle_index = 0; handle_index < Max_Process_Opened_Files; ++handle_index) {
+        if (thread->process->opened_files[handle_index] == notifier_file) {
+            break;
+        }
+    }
+    if (handle_index == Max_Process_Opened_Files) {
+        // tohle by nemelo nastat pokud kernel funguje spravne
+        return false;
+    }
+    bool notified = false;
+    
+    if (thread->multi_wait_fd_bitmap & 1 << handle_index) {
+        if (thread->is_multi_file_wait) {
+            thread->multi_wait_ready_fd = handle_index;
+        }
+        notified |= sThread_Manager.Notify_Thread(thread);
+    }
+
+    return notified; 
+}
+
 // TODO: tykaji se vsechny procesu? Terminate, Get_PID se procesu tyka, ale sleep/Yield je k vlaknu - Hejdula
 // ANSWER: Terminate zabije proces ale z POV vlakna, GETPID muze udelat kazdy vlakno samo o sobe, za me tohle vsechno patri do thread - Adam
 // TODO: pridat exit_thread, pridat join
@@ -366,7 +395,25 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
 }
 
 PIDTID CThread_Manager::GetPIDTID(TThread_Struct* thread) {
+    if (thread == nullptr) {
+        return {Invalid_PID, Invalid_TID};
+    }
     return {thread->process->pid, thread->tid}; 
 }
 
-TThread_List_Node* CThread_Manager::Get_Thread_List_Head() { return this->mThread_List_Head; };
+TThread_List_Node* CThread_Manager::Get_Thread_List_Head() { 
+    return this->mThread_List_Head; 
+}
+TThread_Struct* CThread_Manager::Get_Thread_By_PIDTID(PIDTID pidtid) const { 
+    if (pidtid.pid == Invalid_PID || pidtid.tid == Invalid_TID) {
+        return nullptr;
+    }
+
+    TProcess_Struct* process = sProcessMgr.Get_Process_By_PID(pidtid.pid);
+    if (process == nullptr) {
+        return nullptr;
+    }
+
+    return process->threads[pidtid.tid];
+    // nebo by slo prohledavat seznam vlaken, ale tohle bude se stoupajicim poctem vlaken pri konstantnim poctu procesu rychlejsi.
+};

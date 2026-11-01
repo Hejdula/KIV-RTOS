@@ -46,6 +46,7 @@ TProcess_Struct* CProcess_Manager::Get_Process_By_PID(uint32_t pid) const {
     return node->process;
 }
 
+    // pozn.: tohle se nepouziva
 bool CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file) {
     TProcess_Struct* process = Get_Process_By_PID(pid);
     if (!process) {

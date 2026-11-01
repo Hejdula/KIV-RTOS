@@ -32,8 +32,13 @@ class CThread_Manager {
     uint32_t Create_Thread(TProcess_Struct* process, uint32_t func_addr);
     // prevede dany thread do runnable, nastavi notified
     bool Notify_Thread(TThread_Struct* thread);
+    // notifikuje dane vlakno 
+    bool Notify_Thread(PIDTID pidtid, IFile* notifier_file);
 
     TThread_List_Node* Get_Thread_List_Head();
+
+    // vrati ukazatel na strukturu vlakna se zadanym PIDTID, nebo nullptr, pokud vlakno neexistuje
+    TThread_Struct* Get_Thread_By_PIDTID(PIDTID pidtid) const;
 
     // softwarova preruseni pro process facility  
     void Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target);
