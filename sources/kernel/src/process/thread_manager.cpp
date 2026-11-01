@@ -176,6 +176,10 @@ uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_
     return TID;
 };
 
+void CThread_Manager::Handle_Exit_Thread(TThread_Struct *thread, uint32_t exit_code){
+
+}
+
 bool CThread_Manager::Notify_Thread(TThread_Struct* thread) {
     if (!thread) {
         return false;
@@ -302,10 +306,10 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             cur_thread->blocked_on_tid = Invalid_TID; // takze nastavime ze na nikoho necekame
             target.r0 = target_thread->exit_code;
 
+            // TODO: tohle prochazeni by se dalo nahradit pocitadlem kolik threadu na nej ceka, ale neni to nutne
             bool others_waiting = false;
-            for (TThread_Struct* thread :
-                 cur_thread->process
-                     ->threads) { // projedeme vsechny vlakna, ktera jsou odblokovana nad timto vlaknem, ale jeste si nevyzvedla navratovou hodnotu
+            for (TThread_Struct* thread : cur_thread->process->threads) { // projedeme vsechny vlakna,
+                // ktera jsou odblokovana nad timto vlaknem, ale jeste si nevyzvedla navratovou hodnotu
                 if (thread->state == NThread_State::Runnable && thread->blocked_on_tid == target_thread->tid) { //
                     others_waiting = true; // pokud nekdo takovy je, tak nebudeme delat cleanup
                     break;
@@ -321,6 +325,8 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
         }
 
         case NSWI_Thread_Service::Exit_Thread:
+            Handle_Exit_Thread(cur_thread, r0);
+
             cur_thread->state = NThread_State::Zombie; // deklarujeme ze je zombie
             cur_thread->exit_code = r0;                // natavime exit code
 
@@ -340,7 +346,7 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             sPage_Manager.Free_Page(stack_page_kernel_virt);
             cur_thread->process->page_count--;
 
-            // musime se jeste odhlasit ze seznamu vlaken 
+            // musime se jeste odhlasit ze seznamu vlaken
             // TODO: musime? k cemu jsem pak nastavoval thread state adt kdyz se k tomu uz pak nikdo nedostane
             auto* list_node = mThread_List_Head;
             while (list_node && list_node->thread != cur_thread) {
