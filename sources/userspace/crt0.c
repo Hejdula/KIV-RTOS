@@ -29,5 +29,5 @@ void __crt0_run() {
 
     // volani terminate() syscallu s navratovym kodem funkce main
     asm volatile("mov r0, %0" : : "r" (result));
-    asm volatile("svc #1");
+    asm volatile("svc #9");
 }

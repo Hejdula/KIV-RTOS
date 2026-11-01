@@ -37,7 +37,7 @@ process_bootstrap_common:
     ;@   - user procesy by tady vyvolaly prefetch abort vyjimku (nemaji prava vykonavat kod)
     ;@   - system procesy by ale mohly vesele pokracovat dal, proto si tady umele zavolame terminate
     mov r0, #1
-    svc #1
+    svc #9
     ;@ no a kdyby v kodu planovace byla chyba, tak jeste projistotu zacyklime program
 bootstrap_hang:
     b bootstrap_hang
