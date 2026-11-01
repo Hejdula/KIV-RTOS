@@ -20,7 +20,10 @@ class CThread_Manager {
     // zalozi prazdne vlakno (alokuje pamet)
     inline TThread_Struct* Alloc_Thread_Struct();
 
-    void Unlink_Thread_Node(TThread_List_Node node);
+    // odebere uzel z listu vlaken
+    void Unlink_Thread_Node(TThread_List_Node* node);
+    // allocates and links a thread node to the thread list
+    TThread_List_Node* Link_Thread_To_List(TThread_Struct *thread);
 
   public:
     CThread_Manager();
@@ -38,9 +41,6 @@ class CThread_Manager {
     // notifikuje dane vlakno
     bool Notify_Thread(PIDTID pidtid, IFile* notifier_file);
     
-
-    TThread_List_Node* Get_Thread_List_Head() const;
-
     // vrati ukazatel na strukturu vlakna se zadanym PIDTID, nebo nullptr, pokud vlakno neexistuje
     TThread_Struct* Get_Thread_By_PIDTID(PIDTID pidtid) const;
 
@@ -49,7 +49,13 @@ class CThread_Manager {
 
     static PIDTID GetPIDTID(const TThread_Struct* thread);
     // getter uvodniho uzlu listu vlaken
-    TThread_List_Node* Get_Thread_List_Head();
+    TThread_List_Node* Get_Thread_List_Head() const;
+
+    // nastavi status vlakna jako zombie a jeho exit_code, pripadne ukonci proces pokud to je hlavni vlakno
+    void Handle_Exit_Thread(TThread_Struct* thread, uint32_t exit_code);
+
+    // uvolni zdroje souvisejici s vlaknem, uzel v listu, zasobnik, nelze volat nad hlavnim vlaknem
+    void Terminate_Thread(TProcess_Struct* proc, TThread_List_Node* thread_node);
 };
 
 extern CThread_Manager sThread_Manager;

@@ -233,8 +233,6 @@ bool CThread_Manager::Notify_Thread(PIDTID pidtid, IFile* notifier_file) {
     return notified; 
 }
 
-// TODO: tykaji se vsechny procesu? Terminate, Get_PID se procesu tyka, ale sleep/Yield je k vlaknu - Hejdula
-// ANSWER: Terminate zabije proces ale z POV vlakna, GETPID muze udelat kazdy vlakno samo o sobe, za me tohle vsechno patri do thread - Adam
 // TODO: pridat exit_thread, pridat join
 
 void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target) {
@@ -346,7 +344,9 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             // vypoctu si adresu stackove stranky v kernel prostoru
             const uint32_t stack_page_kernel_virt = (pt[stack_page_virt / PT_Region_Size] & 0xFFF00000) + mem::MemoryVirtualBase;
             // odmapovavam z page table processu - potrebuji adresu v process prostoru
-            unmap_memory(pt, stack_page_virt);
+            // TODO: nepodkopeme si timhle zasobnik ve kterem zrovna pracujeme?? pak dalsi instrukce pracujici 
+            // se stackem bude page fault
+            unmap_memory(pt, stack_page_virt); 
             // dealokuju stranku, kde byl stack - potrebuju adresu v kernel prostoru
             sPage_Manager.Free_Page(stack_page_kernel_virt);
             cur_thread->process->page_count--;
@@ -411,4 +411,33 @@ TThread_Struct* CThread_Manager::Get_Thread_By_PIDTID(PIDTID pidtid) const {
 
     return process->threads[pidtid.tid];
     // nebo by slo prohledavat seznam vlaken, ale tohle bude se stoupajicim poctem vlaken pri konstantnim poctu procesu rychlejsi.
+};
+
+void CThread_Manager::Unlink_Thread_Node(TThread_List_Node *node){
+    if(!node){
+        return;
+    }
+
+    if(node == mThread_List_Head){
+        mThread_List_Head = node->next;
+    }
+    
+    if(node->prev){
+        node->prev->next = node->next;
+    }
+
+    if(node->next){
+        node->next->prev = node->prev;
+    }
+
+    node->prev = nullptr;
+    node->next = nullptr;
+}
+
+TThread_List_Node* CThread_Manager::Link_Thread_To_List(TThread_Struct *thread){
+    TThread_List_Node* node = sKernelMem.Alloc<TThread_List_Node>();
+    node->thread = thread;
+    node->next = mThread_List_Head;
+    mThread_List_Head->prev = node;
+    return node;
 };
