@@ -2,7 +2,8 @@
 
 #include <memory/kernel_heap.h>
 #include <process/process_manager.h>
-
+#include <process/scheduler.h>
+#include <process/thread_manager.h>
 #include <stdstring.h>
 
 #include <drivers/uart.h>
@@ -175,7 +176,8 @@ void IFile::Wait_Enqueue_Current() {
     spinlock_lock(&mWait_Lock);
 
     TWaiting_Task* task = new TWaiting_Task;
-    task->pid = sProcessMgr.Get_Current_Process()->pid;
+    auto* curthread = sScheduler.Get_Current_Thread();
+    task->pidtid = CThread_Manager::GetPIDTID(curthread); // zmena na PIDTID abychom jednoznacne identifikovali vlakno
     task->prev = nullptr;
     task->next = nullptr;
 
@@ -190,14 +192,14 @@ void IFile::Wait_Enqueue_Current() {
     spinlock_unlock(&mWait_Lock);
 }
 
-bool IFile::Wait_Dequeue_Process(uint32_t pid) {
+bool IFile::Wait_Dequeue_Thread(PIDTID pidtid) {
     spinlock_lock(&mWait_Lock);
 
     TWaiting_Task* itr = mWaiting_Tasks;
     bool found = false;
 
     while (itr) {
-        if (itr->pid == pid) {
+        if (itr->pidtid == pidtid) { // zmena na PIDTID abychom jednoznacne identifikovali vlakno
             found = true;
 
             if (itr->prev) {
@@ -226,13 +228,13 @@ uint32_t IFile::Notify(uint32_t count) {
 
     TWaiting_Task* tmp;
     TWaiting_Task* itr = mWaiting_Tasks;
-    while (itr && itr->next) { //najdu zacatek fronty cekajicich procesu
+    while (itr && itr->next) { //najdu zacatek fronty cekajicich vlaken
         itr = itr->next;
     }
 
     uint32_t notified_count = 0;
-    while (itr && notified_count < count) { //dokud nenotifikuju count procesu
-        sProcessMgr.Notify_Process(itr->pid, this); //notifikuju proces 
+    while (itr && notified_count < count) { //dokud nenotifikuju count vlaken
+        sThread_Manager.Notify_Thread(itr->pidtid, this); //notifikuju v procesu vsechna vlakna ktera nad timto souborem cekaji
 
         tmp = itr; 
 

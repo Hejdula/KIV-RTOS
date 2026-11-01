@@ -3,6 +3,7 @@
 #include <hal/intdef.h>
 #include <process/swi.h>
 #include <process/spinlock.h>
+#include <thread.h>
 
 constexpr const uint32_t MaxFSDriverNameLength = 16;
 
@@ -48,7 +49,7 @@ class IFile {
         const NFile_Type_Major mType;
 
         struct TWaiting_Task {
-            uint32_t pid;
+            PIDTID pidtid;
             TWaiting_Task* next;
             TWaiting_Task* prev;
         };
@@ -82,8 +83,8 @@ class IFile {
         virtual uint32_t Notify(uint32_t count);
 
         virtual void Wait_Enqueue_Current();
-        // odstraneni zadaneho procesu ze seznamu cekajicich bez probouzeni
-        virtual bool Wait_Dequeue_Process(uint32_t pid);
+        // odstraneni zadaneho vlakna ze seznamu cekajicich bez probouzeni
+        virtual bool Wait_Dequeue_Thread(PIDTID pidtid);
 
         // zjisti typ souboru
         NFile_Type_Major Get_File_Type() const { return mType; };
