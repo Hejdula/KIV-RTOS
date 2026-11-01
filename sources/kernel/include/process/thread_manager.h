@@ -23,7 +23,7 @@ class CThread_Manager {
     // odebere uzel z listu vlaken
     void Unlink_Thread_Node(TThread_List_Node* node);
     // allocates and links a thread node to the thread list
-    TThread_List_Node* Link_Thread_To_List(TThread_Struct *thread);
+    void Link_Thread_Node(TThread_List_Node* node);
 
   public:
     CThread_Manager();
@@ -40,7 +40,7 @@ class CThread_Manager {
 
     // notifikuje dane vlakno
     bool Notify_Thread(PIDTID pidtid, IFile* notifier_file);
-    
+
     // vrati ukazatel na strukturu vlakna se zadanym PIDTID, nebo nullptr, pokud vlakno neexistuje
     TThread_Struct* Get_Thread_By_PIDTID(PIDTID pidtid) const;
 

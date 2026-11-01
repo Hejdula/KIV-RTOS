@@ -35,12 +35,8 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
     if (!threadnode) {
         return Invalid_TID; // Allocation failed
     }
-    threadnode->next = this->mThread_List_Head;
-    threadnode->prev = nullptr;
-    if (this->mThread_List_Head) {
-        this->mThread_List_Head->prev = threadnode;
-    }
-    this->mThread_List_Head = threadnode;
+
+    Link_Thread_Node(threadnode);
 
     // alokujeme pamet pro vlakno
     process->threads[0] = this->Alloc_Thread_Struct();
@@ -99,13 +95,7 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
         sPage_Manager.Free_Page(code_page_phys + mem::MemoryVirtualBase);
         sPage_Manager.Free_Page(stack_page_phys + mem::MemoryVirtualBase);
         sKernelMem.Free(process->threads[0]);
-
-        if (threadnode->next) {
-            this->mThread_List_Head = threadnode->next;
-            mThread_List_Head->prev = nullptr;
-        } else {
-            mThread_List_Head = nullptr;
-        }
+        Unlink_Thread_Node(threadnode);
         sKernelMem.Free(threadnode);
         process->page_count -= 2;
         return Invalid_TID;
@@ -204,7 +194,7 @@ bool CThread_Manager::Notify_Thread(TThread_Struct* thread) {
     return true;
 }
 
-bool CThread_Manager::Notify_Thread(PIDTID pidtid, IFile* notifier_file) { 
+bool CThread_Manager::Notify_Thread(PIDTID pidtid, IFile* notifier_file) {
     auto* thread = Get_Thread_By_PIDTID(pidtid);
     if (!thread) {
         return false;
@@ -222,7 +212,7 @@ bool CThread_Manager::Notify_Thread(PIDTID pidtid, IFile* notifier_file) {
         return false;
     }
     bool notified = false;
-    
+
     if (thread->multi_wait_fd_bitmap & 1 << handle_index) {
         if (thread->is_multi_file_wait) {
             thread->multi_wait_ready_fd = handle_index;
@@ -230,7 +220,7 @@ bool CThread_Manager::Notify_Thread(PIDTID pidtid, IFile* notifier_file) {
         notified |= sThread_Manager.Notify_Thread(thread);
     }
 
-    return notified; 
+    return notified;
 }
 
 // TODO: pridat exit_thread, pridat join
@@ -323,8 +313,7 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             }
             if (!others_waiting) { // pokud jsme posledni, kdo si vybira navratovou hodnotu, tak uklidime TCB
                 sKernelMem.Free(cur_thread->process->threads[target_thread->tid]);
-                cur_thread->process->threads[target_thread->tid] =
-                    nullptr; // a nastavime v procesu ze dany handle je volny
+                cur_thread->process->threads[target_thread->tid] = nullptr; // a nastavime v procesu ze dany handle je volny
                 cur_thread->process->thread_count--;
             }
 
@@ -344,9 +333,9 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             // vypoctu si adresu stackove stranky v kernel prostoru
             const uint32_t stack_page_kernel_virt = (pt[stack_page_virt / PT_Region_Size] & 0xFFF00000) + mem::MemoryVirtualBase;
             // odmapovavam z page table processu - potrebuji adresu v process prostoru
-            // TODO: nepodkopeme si timhle zasobnik ve kterem zrovna pracujeme?? pak dalsi instrukce pracujici 
+            // TODO: nepodkopeme si timhle zasobnik ve kterem zrovna pracujeme?? pak dalsi instrukce pracujici
             // se stackem bude page fault
-            unmap_memory(pt, stack_page_virt); 
+            unmap_memory(pt, stack_page_virt);
             // dealokuju stranku, kde byl stack - potrebuju adresu v kernel prostoru
             sPage_Manager.Free_Page(stack_page_kernel_virt);
             cur_thread->process->page_count--;
@@ -393,13 +382,11 @@ PIDTID CThread_Manager::GetPIDTID(const TThread_Struct* thread) {
     if (thread == nullptr) {
         return {Invalid_PID, Invalid_TID};
     }
-    return {thread->process->pid, thread->tid}; 
+    return {thread->process->pid, thread->tid};
 }
 
-TThread_List_Node* CThread_Manager::Get_Thread_List_Head() const { 
-    return this->mThread_List_Head; 
-}
-TThread_Struct* CThread_Manager::Get_Thread_By_PIDTID(PIDTID pidtid) const { 
+TThread_List_Node* CThread_Manager::Get_Thread_List_Head() const { return this->mThread_List_Head; }
+TThread_Struct* CThread_Manager::Get_Thread_By_PIDTID(PIDTID pidtid) const {
     if (pidtid.pid == Invalid_PID || pidtid.tid == Invalid_TID) {
         return nullptr;
     }
@@ -413,20 +400,20 @@ TThread_Struct* CThread_Manager::Get_Thread_By_PIDTID(PIDTID pidtid) const {
     // nebo by slo prohledavat seznam vlaken, ale tohle bude se stoupajicim poctem vlaken pri konstantnim poctu procesu rychlejsi.
 };
 
-void CThread_Manager::Unlink_Thread_Node(TThread_List_Node *node){
-    if(!node){
+void CThread_Manager::Unlink_Thread_Node(TThread_List_Node* node) {
+    if (!node) {
         return;
     }
 
-    if(node == mThread_List_Head){
+    if (node == mThread_List_Head) {
         mThread_List_Head = node->next;
     }
-    
-    if(node->prev){
+
+    if (node->prev) {
         node->prev->next = node->next;
     }
 
-    if(node->next){
+    if (node->next) {
         node->next->prev = node->prev;
     }
 
@@ -434,10 +421,13 @@ void CThread_Manager::Unlink_Thread_Node(TThread_List_Node *node){
     node->next = nullptr;
 }
 
-TThread_List_Node* CThread_Manager::Link_Thread_To_List(TThread_Struct *thread){
-    TThread_List_Node* node = sKernelMem.Alloc<TThread_List_Node>();
-    node->thread = thread;
-    node->next = mThread_List_Head;
-    mThread_List_Head->prev = node;
-    return node;
+void CThread_Manager::Link_Thread_Node(TThread_List_Node* node) {
+    if (mThread_List_Head) {
+        node->next = mThread_List_Head;
+        mThread_List_Head->prev = node;
+    } else {
+        node->next = nullptr;
+        node->prev = nullptr;
+    }
+    mThread_List_Head = node;
 };
