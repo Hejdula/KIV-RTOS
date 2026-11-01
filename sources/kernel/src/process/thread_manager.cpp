@@ -365,4 +365,8 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
     }
 }
 
+PIDTID CThread_Manager::GetPIDTID(TThread_Struct* thread) {
+    return {thread->process->pid, thread->tid}; 
+}
+
 TThread_List_Node* CThread_Manager::Get_Thread_List_Head() { return this->mThread_List_Head; };

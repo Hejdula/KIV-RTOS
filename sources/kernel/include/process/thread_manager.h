@@ -35,8 +35,10 @@ class CThread_Manager {
 
     TThread_List_Node* Get_Thread_List_Head();
 
-    // softwarova preruseni pro process facility
+    // softwarova preruseni pro process facility  
     void Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target);
+
+    static PIDTID GetPIDTID(TThread_Struct* thread);
 };
 
 extern CThread_Manager sThread_Manager;

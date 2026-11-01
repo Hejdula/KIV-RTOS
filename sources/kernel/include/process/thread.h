@@ -45,5 +45,14 @@ struct TThread_Struct {
                           // maximalni podporovany rozsah cekani je 0x7FFFFFFF, jelikoz muze citac pretect; diference je vzdy pocitana i s moznosti preteceni
     uint32_t deadline;    // soucasny deadline dokonceni tasku
     uint32_t notified_deadline;  // deadline nastavena po nasledujicim probuzeni vlakna (kolik casu ma vlakno po probuzeni po cekani na neco)
-    unsigned int blocked_on_tid; // TID vlakna, na ktere ceka behem joinu na
+    unsigned int blocked_on_tid; // TID vlakna, na ktere ceka (behem joinu na nej)
+};
+
+// struct jednoznacne identifikujici vlakno v OS
+struct PIDTID {
+    uint32_t pid;
+    uint32_t tid;
+    bool operator==(const PIDTID& other) const {
+        return (pid == other.pid) && (tid == other.tid);
+    }
 };
