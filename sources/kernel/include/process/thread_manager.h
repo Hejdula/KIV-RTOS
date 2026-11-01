@@ -35,7 +35,7 @@ class CThread_Manager {
     // notifikuje dane vlakno 
     bool Notify_Thread(PIDTID pidtid, IFile* notifier_file);
 
-    TThread_List_Node* Get_Thread_List_Head();
+    TThread_List_Node* Get_Thread_List_Head() const;
 
     // vrati ukazatel na strukturu vlakna se zadanym PIDTID, nebo nullptr, pokud vlakno neexistuje
     TThread_Struct* Get_Thread_By_PIDTID(PIDTID pidtid) const;
@@ -43,7 +43,7 @@ class CThread_Manager {
     // softwarova preruseni pro process facility  
     void Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target);
 
-    static PIDTID GetPIDTID(TThread_Struct* thread);
+    static PIDTID GetPIDTID(const TThread_Struct* thread);
 };
 
 extern CThread_Manager sThread_Manager;

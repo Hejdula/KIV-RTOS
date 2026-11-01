@@ -3,7 +3,8 @@
 #include <process/process_manager.h>
 #include <process/scheduler.h>
 #include <process/resource_manager.h>
-
+#include <process/thread.h>
+#include <process/thread_manager.h>
 #include <stdstring.h>
 
 CMutex::CMutex()
@@ -12,32 +13,32 @@ CMutex::CMutex()
 }
 
 bool CMutex::Lock() {
-    auto* cur = sProcessMgr.Get_Current_Process();
-    const unsigned int cpid = cur->pid;
+    auto* cur = sScheduler.Get_Current_Thread();
+    const PIDTID cpidtid = CThread_Manager::GetPIDTID(cur);
 
-    if (mHolder_PID == cpid) {
+    if (mHolder_PIDTID == cpidtid) {
         return false;
     }
 
     while (spinlock_try_lock(&mLock_State) == Lock_Locked) { // try_lock vraci puvodni hodnotu zamku - pokud vrati "zamceno", zamknout se jiste nepovedlo
-        // vlozime ho do fronty cekajicich
+        // vlozime volajici vlakno do fronty cekajicich
         Wait_Enqueue_Current();
 
         // NOTE: tady by mohlo byt vhodne zavest podstav pro blokovany stav nad mutexem (a volat pak s parametrem)
         sScheduler.Block_Current_Thread();
     }
 
-    mHolder_PID = cpid;
+    mHolder_PIDTID = cpidtid;
 
     return true;
 }
 
 bool CMutex::Try_Wait_All_Reserve(uint32_t count) {
-    auto* cur = sProcessMgr.Get_Current_Process();
-    const unsigned int cpid = cur->pid;
+    auto* cur = sScheduler.Get_Current_Thread();
+    const PIDTID cpidtid = CThread_Manager::GetPIDTID(cur);
 
     // tady vracime true, protoze proces uz mutex drzi
-    if (mHolder_PID == cpid) {
+    if (mHolder_PIDTID == cpidtid) {
         return true;
     }
 
@@ -45,7 +46,7 @@ bool CMutex::Try_Wait_All_Reserve(uint32_t count) {
         return false;
     }
 
-    mHolder_PID = cpid;
+    mHolder_PIDTID = cpidtid;
     return true;
 }
 
@@ -55,10 +56,10 @@ bool CMutex::Wait_All_Acquire(uint32_t count)  {
 }
 
 bool CMutex::Try_Lock() {
-    auto* cur = sProcessMgr.Get_Current_Process();
-    const unsigned int cpid = cur->pid;
+    auto* cur = sScheduler.Get_Current_Thread();
+    const PIDTID cpidtid = CThread_Manager::GetPIDTID(cur);
 
-    if (mHolder_PID == cpid) {
+    if (mHolder_PIDTID == cpidtid) {
         return false;
     }
 
@@ -66,14 +67,14 @@ bool CMutex::Try_Lock() {
 }
 
 bool CMutex::Unlock() {
-    auto* cur = sProcessMgr.Get_Current_Process();
-    const unsigned int cpid = cur->pid;
+    auto* cur = sScheduler.Get_Current_Thread();
+    const PIDTID cpidtid = CThread_Manager::GetPIDTID(cur);
 
-    if (mHolder_PID != cpid || mLock_State != Lock_Locked) {
+    if (mHolder_PIDTID != cpidtid || mLock_State != Lock_Locked) {
         return false;
     }
 
-    mHolder_PID = 0;
+    mHolder_PIDTID = {Invalid_PID, Invalid_TID}; //miluju in-place konstrukci structu
     spinlock_unlock(&mLock_State);
 
     return IFile::Notify(1);

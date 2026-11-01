@@ -81,10 +81,10 @@ class CGPIO_File final : public IFile {
             sGPIO.Wait_For_Event(this, mPinNo);
         }
 
-        virtual bool Wait_Dequeue_Process(uint32_t pid) override {
+        virtual bool Wait_Dequeue_Thread(PIDTID pidtid) override {
             // je treba odregistrovat i u GPIO handleru, pokud je tam zaregistrovan
             sGPIO.Cancel_Wait_For_Event(this, mPinNo);
-            return IFile::Wait_Dequeue_Process(pid);
+            return IFile::Wait_Dequeue_Thread(pidtid);
         }
 
         virtual bool Wait(uint32_t count) override {

@@ -3,7 +3,7 @@
 #include <hal/intdef.h>
 #include <process/swi.h>
 #include <process/spinlock.h>
-#include <thread.h>
+#include <process/thread.h>
 
 constexpr const uint32_t MaxFSDriverNameLength = 16;
 

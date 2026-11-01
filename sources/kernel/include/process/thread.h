@@ -55,4 +55,7 @@ struct PIDTID {
     bool operator==(const PIDTID& other) const {
         return (pid == other.pid) && (tid == other.tid);
     }
+    bool operator!=(const PIDTID& other) const {
+        return (pid != other.pid) || (tid != other.tid);
+    }
 };

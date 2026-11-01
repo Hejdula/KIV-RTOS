@@ -1,4 +1,5 @@
 #include <process/resource_manager.h>
+#include <process/thread.h>
 #include <stdstring.h>
 
 CProcess_Resource_Manager sProcess_Resource_Manager;

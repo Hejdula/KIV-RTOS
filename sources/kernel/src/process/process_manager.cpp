@@ -424,9 +424,9 @@ void CProcess_Manager::Handle_WaitAll_SWI(uint32_t r0, uint32_t r1, uint32_t r2,
             target.r0 = cur_thread->multi_wait_ready_fd;
             file_ready = true;
 
-            // Dequeue ze vsech souboru, aby proces nebyl notifikovan znovu
+            // Dequeue ze vsech souboru, aby vlakno nebyl notifikovano znovu
             for (uint32_t i = 0; i < handle_count; i++) {
-                cur_process->opened_files[handles[i]]->Wait_Dequeue_Process(cur_process->pid);
+                cur_process->opened_files[handles[i]]->Wait_Dequeue_Thread(CThread_Manager::GetPIDTID(cur_thread));
             }
         } else {
             // resource jsme neziskali - mozna doslo k falesnemu probuzeni, nebo nas nekdo jiny probudil

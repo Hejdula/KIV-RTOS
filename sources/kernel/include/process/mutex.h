@@ -2,13 +2,15 @@
 
 #include <hal/peripherals.h>
 #include <fs/filesystem.h>
-
+#include <process/thread.h>
+#include <process/thread_manager.h>
+#include <process/process_manager.h>
 #include "spinlock.h"
 
 class CMutex : public IFile {
     private:
         // kdo aktualne drzi mutex?
-        unsigned int mHolder_PID = 0;
+        PIDTID mHolder_PIDTID = {Invalid_PID, Invalid_TID};
 
         // stav zamku - odemceny
         spinlock_t mLock_State = Lock_Unlocked;
@@ -31,7 +33,7 @@ class CMutex : public IFile {
         bool Unlock();
 
         // ziska PID drzitele
-        unsigned int Get_Holder_PID() const { return mHolder_PID; }
+        PIDTID Get_Holder_PIDTID() const { return mHolder_PIDTID; }
 
         // rozhrani IFile - pro userspace
         
