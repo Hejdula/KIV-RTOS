@@ -340,25 +340,15 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             sPage_Manager.Free_Page(stack_page_kernel_virt);
             cur_thread->process->page_count--;
 
-            // musime se jeste odhlasit ze seznamu vlaken
+            // musime se jeste odhlasit ze seznamu vlaken 
+            // TODO: musime? k cemu jsem pak nastavoval thread state adt kdyz se k tomu uz pak nikdo nedostane
             auto* list_node = mThread_List_Head;
-            while (list_node->thread != cur_thread) {
+            while (list_node && list_node->thread != cur_thread) {
                 list_node = list_node->next;
-                // ze v seznamu neni nepredpokladam, a kdyby nebyla tak mame praci hotovou
-                if (!list_node) {
-                    break;
-                }
             }
+
             if (list_node) {
-                // pokud ma predchudce tak normalni operace, jinak odebirame thread list head!
-                if (list_node->prev) {
-                    list_node->prev->next = list_node->next;
-                } else {
-                    mThread_List_Head = list_node->next;
-                }
-                if (list_node->next) {
-                    list_node->next->prev = list_node->prev;
-                }
+                Unlink_Thread_Node(list_node);
                 sKernelMem.Free(list_node);
             }
 

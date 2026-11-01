@@ -19,7 +19,7 @@
 #include <drivers/uart.h>
 
 CProcess_Manager sProcessMgr;
-//CThread_Manager sThreadMgr; kdo je za tohle zodpovedny tomu hlava upadne
+// CThread_Manager sThreadMgr; kdo je za tohle zodpovedny tomu hlava upadne
 
 CProcess_Manager::CProcess_Manager() : mLast_PID(0), mProcess_List_Head(nullptr), mCurrent_Process_Node(nullptr) {}
 
@@ -46,7 +46,7 @@ TProcess_Struct* CProcess_Manager::Get_Process_By_PID(uint32_t pid) const {
     return node->process;
 }
 
-    // pozn.: tohle se nepouziva
+// pozn.: tohle se nepouziva
 bool CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file) {
     TProcess_Struct* process = Get_Process_By_PID(pid);
     if (!process) {
@@ -195,6 +195,18 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     }
 
     return process->pid;
+}
+
+void CProcess_Manager::Terminate_Process(TProcess_Struct* proc){
+    // zavreme vsechny soubory procesu
+    Close_All_Files(proc);
+
+    // TODO:
+    // ukoncit vsechny vlakna az na to ve kterym tohle bezi?
+    // zjistit jak to je s poslednim stackem? - uvolneni page-table
+    //
+    // nastavit jako zombie + retcode -> nastavit to hlavnimu vlaknu, 
+    // ale co kdyz terminate nebezi v hlavnim vlaknu?
 }
 
 uint32_t CProcess_Manager::Map_File_To_Current(IFile* file) {
