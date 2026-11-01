@@ -254,11 +254,7 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             break;
 
         case NSWI_Thread_Service::Terminate:
-            // TODO: je treba korekne ukoncit vsechny vlakna, soubory, heap atd a nastavit process jako zombie
-            // mCurrent_Task_Node->task->sched_counter = 1;
-            // mCurrent_Task_Node->task->state = NTask_State::Zombie;
-            // mCurrent_Task_Node->task->exit_code = r0;
-            // Close_All_Files(mCurrent_Task_Node->task);
+            sProcessMgr.Terminate_Process(cur_thread->process);
             sScheduler.Schedule();
             break;
 
@@ -294,7 +290,6 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             break;
         }
 
-        // TODO: implementovat
         case NSWI_Thread_Service::Thread:
             if (cur_thread->process->thread_count >= Max_Process_Threads) {
                 target.r0 = Invalid_TID;
@@ -307,7 +302,7 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             break;
 
         case NSWI_Thread_Service::Join: {
-            auto* target_thread = cur_thread->process->threads[r0]; // vyzvedneme si ukazatel na vlakno, ktere joinujeme
+            auto* target_thread = cur_thread->process->threads[r0]; // vyzvedneme si ukazat;el na vlakno, ktere joinujeme
 
             if (target_thread->state != NThread_State::Zombie) {    // pokud dane vlakno jeste nedobehlo
                 cur_thread->state = NThread_State::Blocked_on_Join; // tak se zablokujeme
@@ -331,7 +326,7 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             if (!others_waiting) { // pokud jsme posledni, kdo si vybira navratovou hodnotu, tak uklidime TCB
                 sKernelMem.Free(cur_thread->process->threads[target_thread->tid]);
                 cur_thread->process->threads[target_thread->tid] =
-                    nullptr; // a nastavime v procesu ze dany handle je volny - TODO: tohle mozna bude v thread_manageru
+                    nullptr; // a nastavime v procesu ze dany handle je volny
                 cur_thread->process->thread_count--;
             }
 
@@ -345,7 +340,7 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             // vypoctu si adresu stackove stranky v process-prostoru. Jelikoz jsme sem skocili z programu (volanim), tak stack vlakna nebude nikdy prazdny,
             // nemuze se stat ze by tohle vyhodilo adresu stranky o jedna vyssi
             uint32_t stack_page_virt = (cur_thread->cpu_context.sp / PT_Region_Size) * PT_Region_Size;
-            // vypoctu si pointer na page table a odmapuju stack
+            // vypoctu si pointer na page table a odmapuju stack // tohle je ted dostupne z process.page_table
             uint32_t* pt =
                 reinterpret_cast<uint32_t*>((cur_thread->cpu_context.ttbr0 & ~(TTBR_Flags::Inner_Cacheable | TTBR_Flags::Shared)) + mem::MemoryVirtualBase);
             // vypoctu si adresu stackove stranky v kernel prostoru

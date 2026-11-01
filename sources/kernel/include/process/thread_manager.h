@@ -5,8 +5,6 @@
 #include "swi.h"
 #include "thread.h"
 
-
-
 struct TThread_List_Node {
     TThread_List_Node* prev;
     TThread_List_Node* next;
@@ -22,28 +20,36 @@ class CThread_Manager {
     // zalozi prazdne vlakno (alokuje pamet)
     inline TThread_Struct* Alloc_Thread_Struct();
 
+    void Unlink_Thread_Node(TThread_List_Node node);
+
   public:
     CThread_Manager();
     // TODO: tady uklidit
 
     // Vytvori prvni vlakno procesu, nahraje kod do pameti
     uint32_t Create_First_Thread(TProcess_Struct* process, unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system);
+
     // Vytvori vlakno dle volajiciho rodice
     uint32_t Create_Thread(TProcess_Struct* process, uint32_t func_addr);
+
     // prevede dany thread do runnable, nastavi notified
     bool Notify_Thread(TThread_Struct* thread);
-    // notifikuje dane vlakno 
+
+    // notifikuje dane vlakno
     bool Notify_Thread(PIDTID pidtid, IFile* notifier_file);
+    
 
     TThread_List_Node* Get_Thread_List_Head() const;
 
     // vrati ukazatel na strukturu vlakna se zadanym PIDTID, nebo nullptr, pokud vlakno neexistuje
     TThread_Struct* Get_Thread_By_PIDTID(PIDTID pidtid) const;
 
-    // softwarova preruseni pro process facility  
+    // softwarova preruseni pro process facility
     void Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target);
 
     static PIDTID GetPIDTID(const TThread_Struct* thread);
+    // getter uvodniho uzlu listu vlaken
+    TThread_List_Node* Get_Thread_List_Head();
 };
 
 extern CThread_Manager sThread_Manager;
