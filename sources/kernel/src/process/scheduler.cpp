@@ -44,8 +44,7 @@ TThread_List_Node* CScheduler::Schedule_RR() {
     // a nebo new (novy proces, ktery jeste nebyl planovany)
     while (node->thread->state != NThread_State::Runnable && node->thread->state != NThread_State::Running && node->thread->state != NThread_State::New) {
         if (!node->next) {
-            node = mCurrent_Thread_Node;
-            break;
+            node = sThread_Manager.Get_Thread_List_Head();
         } else {
             node = node->next;
         }
@@ -155,7 +154,7 @@ void CScheduler::Schedule() {
     Switch_To(next);
 
     // TODO:
-    if (mCleanup_Contents->do_cleanup) {
+    if (mCleanup_Contents.do_cleanup) {
 
         // uint32_t stack_page_phys = (pt[cur_thread->cpu_context.sp / PT_Region_Size] & 0xFFF00000);
         // sPage_Manager.Free_Page(stack_page_phys);
@@ -209,7 +208,7 @@ void CScheduler::Set_Deferred_Cleanup(bool free_page_table){
     uint32_t stack_page_virt = (Stack_Area_Virtual_Base + Stack_Guard_Size + (Stack_Size + Stack_Guard_Size) * mCurrent_Thread->tid);
     uint32_t stack_page_phys = (pt[stack_page_virt / PT_Region_Size] & 0xFFFFF000);
 
-    *mCleanup_Contents = TDeferred_Thread_Cleanup{
+    mCleanup_Contents = TDeferred_Thread_Cleanup{
         .do_cleanup = true,
         .thread_node = mCurrent_Thread_Node,
         .stack_page_virt = stack_page_virt,

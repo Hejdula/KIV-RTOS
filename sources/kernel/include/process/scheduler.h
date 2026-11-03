@@ -20,7 +20,7 @@ class CScheduler {
     // prave bezici vlakno
     TThread_Struct* mCurrent_Thread;
     TThread_List_Node* mCurrent_Thread_Node;
-    TDeferred_Thread_Cleanup* mCleanup_Contents;
+    TDeferred_Thread_Cleanup mCleanup_Contents;
 
   private:
     void Switch_To(TThread_List_Node* node);
