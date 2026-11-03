@@ -2,8 +2,10 @@
 
 .global mmu_clean_dcache_entry
 mmu_clean_dcache_entry:
-    ;@ r0 contains the kernel space address of the page table entry pointer
-    mcr p15, 0, r0, c7, c10, 1          ;@ Clean only the provided data cache line
+    ;@ do r0 jako arg funkce passneme konkretni virtualni adresu pameti
+    ;@ u ktere chceme vymazat zaznam cashe procesoru, 
+    ;@ tim napriklad zajistime ze se cashe zaznam propise az do pameti
+    mcr p15, 0, r0, c7, c10, 1
     bx  lr
 
 .global mmu_invalidate_cache

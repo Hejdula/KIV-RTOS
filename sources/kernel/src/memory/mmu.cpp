@@ -51,9 +51,11 @@ void map_memory(uint32_t* target_pt, uint32_t phys, uint32_t virt) {
 }
 
 void unmap_memory(uint32_t* target_pt, uint32_t virt) {
+    // vymazeme zaznam z page table a ujistime se ze se propsise z cpu cashe do pameti
     target_pt[PT_Entry(virt)] = 0;
-    // musime invalidovat TLB abychom z nej odstranili stranku kterou jsme prave odmapovali
     mmu_clean_dcache_entry(&target_pt[virt]);
+
+    // musime invalidovat TLB abychom z nej odstranili stranku kterou jsme prave odmapovali
     mmu_data_sync_barrier();
     mmu_invalidate_tlb();
 }
