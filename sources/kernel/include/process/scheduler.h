@@ -8,7 +8,9 @@ enum class NGet_Sched_Info_Type;
 
 struct TDeferred_Thread_Cleanup {
     bool do_cleanup;
-    uint32_t* stack_page_phys;
+    TThread_List_Node* thread_node;
+    uint32_t stack_page_virt;
+    uint32_t stack_page_phys;
     bool do_free_pt;
     uint32_t* page_table;
 };
@@ -38,12 +40,15 @@ class CScheduler {
     void Schedule();
 
     TThread_Struct* Get_Current_Thread() const;
+    TThread_List_Node* Get_Current_Thread_Node() const;
 
     // blokuje soucasny proces (zatim v generickem stavu "Blocked"), preplanuje na jiny proces
     void Block_Current_Thread();
 
     // ziska info z planovace
     bool Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target);
+
+    void Set_Deferred_Cleanup(bool free_page_table);
 };
 
 extern CScheduler sScheduler;

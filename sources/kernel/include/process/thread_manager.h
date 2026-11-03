@@ -51,7 +51,7 @@ class CThread_Manager {
     // getter uvodniho uzlu listu vlaken
     TThread_List_Node* Get_Thread_List_Head() const;
 
-    // nastavi status vlakna jako zombie a jeho exit_code, pripadne ukonci proces pokud to je hlavni vlakno
+    // nastavi status vlakna jako zombie a jeho exit_code
     void Handle_Exit_Thread(TThread_Struct* thread, uint32_t exit_code);
 
     // uvolni zdroje souvisejici s vlaknem, uzel v listu, zasobnik, nelze volat nad hlavnim vlaknem

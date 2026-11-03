@@ -1,8 +1,9 @@
 #include "drivers/timer.h"
-#include <process/thread_manager.h>
+#include "memory/mmu.h"
 #include <process/process_manager.h>
 #include <process/scheduler.h>
 #include <process/thread.h>
+#include <process/thread_manager.h>
 #include <stdstring.h>
 
 CScheduler sScheduler;
@@ -13,16 +14,17 @@ void context_switch_first(TCPU_Context* ctx_to, TCPU_Context* ctx_from);
 };
 
 CScheduler::CScheduler() : mCurrent_Thread(nullptr) {
-    //mSchedule_Fnc = &CScheduler::Schedule_RR;
+    // mSchedule_Fnc = &CScheduler::Schedule_RR;
     mSchedule_Fnc = &CScheduler::Schedule_EDF;
 }
 
 TThread_List_Node* CScheduler::Schedule_RR() {
     // je nejaky proces naplanovany? pokud je ve stavu running, budeme snizovat citac, pokud ne, musime okamzite preplanovat
     if (mCurrent_Thread && mCurrent_Thread->state == NThread_State::Running) {
-        
+
         if (mCurrent_Thread->sched_counter == 0) {
-            for(;;); //hang
+            for (;;)
+                ; // hang
         }
 
         // snizime citac planovace
@@ -101,6 +103,7 @@ TThread_List_Node* CScheduler::Schedule_EDF() {
 }
 
 TThread_Struct* CScheduler::Get_Current_Thread() const { return mCurrent_Thread; }
+TThread_List_Node* CScheduler::Get_Current_Thread_Node() const { return mCurrent_Thread_Node; };
 
 void CScheduler::Block_Current_Thread() {
     TThread_Struct* cur = Get_Current_Thread();
@@ -113,8 +116,6 @@ void CScheduler::Block_Current_Thread() {
 
     Schedule();
 }
-
-
 
 void CScheduler::Schedule() {
     // inicializace neni potreba, kdyztak ji dela planovac
@@ -154,14 +155,20 @@ void CScheduler::Schedule() {
     Switch_To(next);
 
     // TODO:
-    if(mCleanup_Contents->do_cleanup){
-        // unmap stack page
-        if(mCleanup_Contents->do_free_pt){
-            // free whole pt
-        } else {
-            // unmap stack from pt
-        }
-        
+    if (mCleanup_Contents->do_cleanup) {
+
+        // uint32_t stack_page_phys = (pt[cur_thread->cpu_context.sp / PT_Region_Size] & 0xFFF00000);
+        // sPage_Manager.Free_Page(stack_page_phys);
+        // cur_thread->process->page_count--;
+        //
+        // unmap_memory(pt, stack_page_virt);
+        // // unmap stack page
+        // // unlink thread list node
+        // if (mCleanup_Contents->do_free_pt) {
+        //     // free whole pt
+        // } else {
+        //     // unmap stack from pt
+        // }
     }
 }
 
@@ -176,7 +183,6 @@ void CScheduler::Switch_To(TThread_List_Node* node) {
     mCurrent_Thread->sched_counter = 0;
 
     TCPU_Context* old = &mCurrent_Thread->cpu_context;
-
 
     // prehodime na novy proces, pridelime casova kvanta a nastavime proces do stavu Running
     mCurrent_Thread = node->thread;
@@ -195,6 +201,23 @@ void CScheduler::Switch_To(TThread_List_Node* node) {
     }
 }
 
+void CScheduler::Set_Deferred_Cleanup(bool free_page_table){ 
+    uint32_t* pt = mCurrent_Thread->process->page_table;
+
+    // NOTE: pocitame stack z TID a ne aktualniho sp, kdybychom v budoucnu chteli v kernelu resit stack overflow/stack corruption
+    // uint32_t stack_page_virt = (cur_thread->cpu_context.sp / PT_Region_Size) * PT_Region_Size;
+    uint32_t stack_page_virt = (Stack_Area_Virtual_Base + Stack_Guard_Size + (Stack_Size + Stack_Guard_Size) * mCurrent_Thread->tid);
+    uint32_t stack_page_phys = (pt[stack_page_virt / PT_Region_Size] & 0xFFFFF000);
+
+    *mCleanup_Contents = TDeferred_Thread_Cleanup{
+        .do_cleanup = true,
+        .thread_node = mCurrent_Thread_Node,
+        .stack_page_virt = stack_page_virt,
+        .stack_page_phys = stack_page_phys,
+        .page_table = pt,
+    };
+}
+
 bool CScheduler::Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target) {
     if (!target) {
         return false;
@@ -205,7 +228,8 @@ bool CScheduler::Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target) {
             TThread_List_Node* node = sThread_Manager.Get_Thread_List_Head();
             uint32_t procCnt = 0;
             while (node) {
-                if (node->thread->state == NThread_State::Running || node->thread->state == NThread_State::Runnable || node->thread->state == NThread_State::New ) {
+                if (node->thread->state == NThread_State::Running || node->thread->state == NThread_State::Runnable ||
+                    node->thread->state == NThread_State::New) {
                     procCnt++;
                 }
 
