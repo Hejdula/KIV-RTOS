@@ -337,10 +337,11 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
         }
 
         case NSWI_Thread_Service::Exit_Thread:
+            // terminate process if exitting from main thread
             if(cur_thread->tid == 0){
-                Handle_Exit_Thread(cur_thread, r0);
-            } else {
                 sProcessMgr.Terminate_Process(cur_thread->process);
+            } else {
+                Handle_Exit_Thread(cur_thread, r0);
             }
             break;
     }
