@@ -152,6 +152,17 @@ void CScheduler::Schedule() {
     }
 
     Switch_To(next);
+
+    // TODO:
+    if(mCleanup_Contents->do_cleanup){
+        // unmap stack page
+        if(mCleanup_Contents->do_free_pt){
+            // free whole pt
+        } else {
+            // unmap stack from pt
+        }
+        
+    }
 }
 
 void CScheduler::Switch_To(TThread_List_Node* node) {

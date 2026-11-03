@@ -39,6 +39,7 @@ void blu() {
 void returning_thread() {
     // set_task_deadline(0x1000);
     // sleep(0x1000);
+    asm volatile("swi 9");
     return;
 }
 
@@ -48,6 +49,6 @@ int main(int argc, char** argv) {
     uint32_t TID3 = thread(&returning_thread);
 
     while (true) {
-        sleep(0x40000);
+        sleep(0x1000);
     }
 }

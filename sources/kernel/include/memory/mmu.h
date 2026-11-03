@@ -171,6 +171,8 @@ namespace DL1_Flags {
 extern "C" void mmu_invalidate_cache();
 extern "C" void mmu_data_sync_barrier();
 extern "C" void mmu_invalidate_tlb();
+extern "C" void mmu_clean_dcache_entry(uint32_t* pt_entry);
+
 
 // zkopiruje tabulku stranek jadra do dodane tabulky
 void copy_kernel_page_table_to(uint32_t* target);

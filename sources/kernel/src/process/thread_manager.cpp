@@ -161,6 +161,7 @@ uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_
     new_thread->cpu_context = TCPU_Context{.lr = func_addr,
                                            .sp = stack_page_virtual + Stack_Size,
                                            .pc = reinterpret_cast<uint32_t>(&user_process_bootstrap), // TODO: nevim jestli tohle dela co ma
+                                           // taky je treba dedit od procesu jestli je tohle system nebo user bootstrap
                                            .ttbr0 = process->ttbr0};
     new_thread->process = process;
     new_thread->tid = TID;
@@ -178,7 +179,7 @@ uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_
 
 void CThread_Manager::Handle_Exit_Thread(TThread_Struct* cur_thread, uint32_t exit_code) {
     cur_thread->state = NThread_State::Zombie; // deklarujeme ze je zombie
-    cur_thread->exit_code = exit_code;                // natavime exit code
+    cur_thread->exit_code = exit_code;         // natavime exit code
 
     // vypoctu si adresu stackove stranky v process-prostoru. Jelikoz jsme sem skocili z programu (volanim), tak stack vlakna nebude nikdy prazdny,
     // nemuze se stat ze by tohle vyhodilo adresu stranky o jedna vyssi
@@ -191,23 +192,9 @@ void CThread_Manager::Handle_Exit_Thread(TThread_Struct* cur_thread, uint32_t ex
     // TODO: nepodkopeme si timhle zasobnik ve kterem zrovna pracujeme?? pak dalsi instrukce pracujici
     // se stackem bude page fault
     unmap_memory(pt, stack_page_virt);
-    // dealokuju stranku, kde byl stack - potrebuju adresu v kernel prostoru
-    sPage_Manager.Free_Page(stack_page_kernel_virt);
+    // dealokuju stranku, kde byl stack - potrebuju adresu v kernel prostoru?
+    sPage_Manager.Free_Page(stack_page_virt);
     cur_thread->process->page_count--;
-
-    // musime se jeste odhlasit ze seznamu vlaken
-    // TODO: musime? k cemu jsem pak nastavoval thread state adt kdyz se k tomu uz pak nikdo nedostane
-    auto* list_node = mThread_List_Head;
-    while (list_node && list_node->thread != cur_thread) {
-        list_node = list_node->next;
-    }
-
-    if (list_node) {
-        Unlink_Thread_Node(list_node);
-        sKernelMem.Free(list_node);
-    }
-
-    // Page table dealokuje terminate
 
     for (TThread_Struct* thread : cur_thread->process->threads) { // projedeme vsechny vlakna, ktera jsou zablokovana nad "my.join()"
         if (thread->state == NThread_State::Blocked_on_Join && thread->blocked_on_tid == cur_thread->tid) {
@@ -216,6 +203,19 @@ void CThread_Manager::Handle_Exit_Thread(TThread_Struct* cur_thread, uint32_t ex
     }
 
     // TODO: pokud jsem posledni thread procesu tak volam terminate?
+    
+    // musime se jeste odhlasit ze seznamu vlaken
+    // TODO: musime? k cemu jsem pak nastavoval thread state adt kdyz se k tomu uz pak nikdo nedostane
+    // auto* list_node = mThread_List_Head;
+    // while (list_node && list_node->thread != cur_thread) {
+    //     list_node = list_node->next;
+    // }
+
+    // TODO: naplnit refered cleanup,  
+    // if (list_node) {
+    //     Unlink_Thread_Node(list_node);
+    //     sKernelMem.Free(list_node);
+    // }
 
     sScheduler.Schedule();
 }

@@ -1,5 +1,11 @@
 .section .text
 
+.global mmu_clean_dcache_entry
+mmu_clean_dcache_entry:
+    ;@ r0 contains the kernel space address of the page table entry pointer
+    mcr p15, 0, r0, c7, c10, 1          ;@ Clean only the provided data cache line
+    bx  lr
+
 .global mmu_invalidate_cache
 mmu_invalidate_cache:
     mov r1, #0
