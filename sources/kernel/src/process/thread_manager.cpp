@@ -192,6 +192,24 @@ void CThread_Manager::Handle_Exit_Thread(TThread_Struct* cur_thread, uint32_t ex
     sScheduler.Schedule();
 }
 
+void CThread_Manager::Free_Thread_Resources(TProcess_Struct *proc, TThread_List_Node *thread_node){
+    if(!proc || thread_node){
+        return;
+    }
+
+    // free stack page
+    uint32_t stack_page_virt = (Stack_Area_Virtual_Base + Stack_Guard_Size + (Stack_Size + Stack_Guard_Size) * thread_node->thread->tid);
+    uint32_t stack_page_phys = (proc->page_table[stack_page_virt / PT_Region_Size] & 0xFFF00000);
+
+    sPage_Manager.Free_Page(stack_page_phys);
+
+    proc->page_count--;
+    
+    sKernelMem.Free(thread_node->thread);
+    Unlink_Thread_Node(thread_node);
+    sKernelMem.Free(thread_node);
+}
+
 bool CThread_Manager::Notify_Thread(TThread_Struct* thread) {
     if (!thread) {
         return false;

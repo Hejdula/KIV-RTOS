@@ -50,7 +50,7 @@ class CThread_Manager {
     void Handle_Exit_Thread(TThread_Struct* thread, uint32_t exit_code);
 
     // uvolni zdroje souvisejici s vlaknem, uzel v listu, zasobnik, nelze volat nad hlavnim vlaknem
-    void Terminate_Thread(TProcess_Struct* proc, TThread_List_Node* thread_node);
+    void Free_Thread_Resources(TProcess_Struct* proc, TThread_List_Node* thread_node);
 
     // odebere uzel z listu vlaken
     void Unlink_Thread_Node(TThread_List_Node* node);
