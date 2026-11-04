@@ -4,6 +4,8 @@
 #include <drivers/gpio.h>
 #include <process/process_manager.h>
 
+volatile bool run = true;
+
 void red() {
     uint32_t REDLED_file = open("DEV:gpio/23", NFile_Open_Mode::Write_Only);
 
@@ -12,7 +14,7 @@ void red() {
 
     set_task_deadline(fast ? 0x1000 : 0x4000);
 
-    while (true) {
+    while (run) {
         write(REDLED_file, "1", 2);
         sleep(fast ? 0x400 : 0x1200, fast ? 0x1000 : 0x4000);
         write(REDLED_file, "0", 2);
@@ -50,5 +52,8 @@ int main(int argc, char** argv) {
 
     while (true) {
         sleep(0x1000);
+        run = false;
+        sleep(0x10000);
+        run = true;
     }
 }

@@ -13,7 +13,7 @@ struct TDeferred_Thread_Cleanup {
     TThread_List_Node* thread_node;
     uint32_t stack_page_virt;
     uint32_t stack_page_phys;
-    bool do_free_pt;
+    bool do_free_pt;                
     uint32_t* page_table;
 };
 
