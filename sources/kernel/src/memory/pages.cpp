@@ -1,3 +1,4 @@
+#include "memory/memmap.h"
 #include <memory/pages.h>
 
 CPage_Manager sPage_Manager;
@@ -48,5 +49,5 @@ void CPage_Manager::Free_Page(uint32_t phys_addr)
 {
     // pro vyssi bezpecnost v nejakych safe systemech lze tady data stranky premazavat napr. nulami po dealokaci
 
-    Mark(phys_addr / mem::PageSize, false);
+    Mark((phys_addr + mem::MemoryVirtualBase - mem::LowMemory) / mem::PageSize, false);
 }
