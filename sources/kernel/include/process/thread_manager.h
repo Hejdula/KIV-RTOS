@@ -28,7 +28,7 @@ class CThread_Manager {
     uint32_t Create_First_Thread(TProcess_Struct* process, unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system);
 
     // Vytvori vlakno dle volajiciho rodice
-    uint32_t Create_Thread(TProcess_Struct* process, uint32_t func_addr);
+    uint32_t Create_Thread(TProcess_Struct* process, uint32_t func_addr, uint32_t arg, uint32_t userspace_thread_wrapper);
 
     // prevede dany thread do runnable, nastavi notified
     bool Notify_Thread(TThread_Struct* thread);
@@ -43,6 +43,7 @@ class CThread_Manager {
     void Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target);
 
     static PIDTID GetPIDTID(const TThread_Struct* thread);
+
     // getter uvodniho uzlu listu vlaken
     TThread_List_Node* Get_Thread_List_Head() const;
 

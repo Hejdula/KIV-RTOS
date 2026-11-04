@@ -1,5 +1,6 @@
 #include "process/process.h"
 #include "process/thread.h"
+#include "stdfile.h"
 #include <drivers/timer.h>
 #include <memory/kernel_heap.h>
 #include <memory/memmap.h>
@@ -114,7 +115,7 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
     return process->threads[0]->tid;
 }
 
-uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_addr) {
+uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_addr, uint32_t arg, uint32_t userspace_thread_wrapper) {
     uint32_t TID = Invalid_TID;
     { // first fit available TID
         for (uint32_t i = 0; i < Max_Process_Threads; ++i) {
@@ -152,15 +153,21 @@ uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_
     process->threads[TID] = new_thread;
 
     uint32_t stack_page_phys = static_cast<unsigned long>(sPage_Manager.Alloc_Page()) - mem::MemoryVirtualBase;
-
     // kde ve pameti bude stack, pred nim jsou stacky a guard vlaken s nizsim TIO a guard page tohoto stacku
     uint32_t stack_page_virtual = (Stack_Area_Virtual_Base + Stack_Guard_Size + TID * (Stack_Size + Stack_Guard_Size));
     // namapujeme stack vlakna do tabulky stranek
     map_memory(process->page_table, stack_page_phys, stack_page_virtual);
 
+    uint32_t* kernel_stack_top = reinterpret_cast<uint32_t*>(stack_page_phys + mem::MemoryVirtualBase + Stack_Size);
+
+    *(--kernel_stack_top) = reinterpret_cast<uint32_t>(arg); 
+    *(--kernel_stack_top) = reinterpret_cast<uint32_t>(func_addr);
+
+    uint32_t stack_offset = reinterpret_cast<uint32_t>(kernel_stack_top) - (stack_page_phys + mem::MemoryVirtualBase);
+
     // *new_thread = TThread_Struct{}; // this needs memset to be defined, would be nice for zeroing the structs
-    new_thread->cpu_context = TCPU_Context{.lr = func_addr,
-                                           .sp = stack_page_virtual + Stack_Size,
+    new_thread->cpu_context = TCPU_Context{.lr = userspace_thread_wrapper,
+                                           .sp = stack_page_virtual + stack_offset,
                                            .pc = reinterpret_cast<uint32_t>(process->is_system ? &system_process_bootstrap : &user_process_bootstrap),
                                            .ttbr0 = process->ttbr0};
     new_thread->process = process;
@@ -316,7 +323,7 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
                 break;
             }
 
-            target.r0 = Create_Thread(cur_thread->process, r0);
+            target.r0 = Create_Thread(cur_thread->process, r0, r1, r2);
             // v r0 vracime TID, muze byt invalid, thread se pak nepodarilo vytvorit
             sScheduler.Schedule();
             break;

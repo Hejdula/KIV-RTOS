@@ -159,10 +159,33 @@ uint32_t get_task_ticks_to_deadline() {
     return ticks;
 }
 
+// Po zavolani uzivatelske funkce zavola thread_exit_syscall
+// Prvni ctyri argumenty jsou placeholders aby si argumenty fce vzal ze stacku 
+// NOTE: musi byt v userspace, jinak by se proces snazil precict instrukci ze system memory a nastal prefetch abort
+void thread_entry_wrapper(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t (*user_func)(void*), void* arg) {
+    int exit_code = user_func(arg);
+
+    asm volatile("mov %0, r0" : "=r" (exit_code));
+    asm volatile("svc #9");
+}
+
 uint32_t thread(void (*func)()){
     uint32_t retcode;
 
     asm volatile("mov r0, %0" : : "r" (func));
+    asm volatile("mov r2, %0" : : "r" (&thread_entry_wrapper));
+    asm volatile("swi 7");
+    asm volatile("mov %0, r0" : "=r" (retcode));
+    
+    return retcode;
+}
+
+uint32_t thread(void (*func)(void*), void* arg){
+    uint32_t retcode;
+
+    asm volatile("mov r0, %0" : : "r" (func));
+    asm volatile("mov r1, %0" : : "r" (arg));
+    asm volatile("mov r2, %0" : : "r" (&thread_entry_wrapper));
     asm volatile("swi 7");
     asm volatile("mov %0, r0" : "=r" (retcode));
     

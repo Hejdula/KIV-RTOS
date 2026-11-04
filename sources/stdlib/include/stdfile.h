@@ -24,4 +24,5 @@ uint32_t wait_all(uint32_t* files, uint32_t file_count, uint32_t notified_deadli
 bool sleep(uint32_t ticks, uint32_t notified_deadline = Deadline_Unchanged);
 uint32_t thread(void (*func)());
 
+void thread_entry_wrapper(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t (*user_func)(void*), void* arg); 
 uint32_t pipe(const char* name, uint32_t buf_size);
