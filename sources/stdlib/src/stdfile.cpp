@@ -180,7 +180,7 @@ uint32_t thread(void (*func)()){
     return retcode;
 }
 
-uint32_t thread(void (*func)(void*), void* arg){
+uint32_t thread(void* (*func)(void*), void* arg){
     uint32_t retcode;
 
     asm volatile("mov r0, %0" : : "r" (func));
