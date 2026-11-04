@@ -14,8 +14,9 @@ void red() {
 
     set_task_deadline(fast ? 0x1000 : 0x4000);
 
-    while (run) {
-        write(REDLED_file, "1", 2);
+    while (true) {
+        if (run)
+            write(REDLED_file, "1", 2);
         sleep(fast ? 0x400 : 0x1200, fast ? 0x1000 : 0x4000);
         write(REDLED_file, "0", 2);
         sleep(fast ? 0x400 : 0x1200, fast ? 0x1000 : 0x4000);
@@ -53,7 +54,7 @@ int main(int argc, char** argv) {
     while (true) {
         sleep(0x1000);
         run = false;
-        sleep(0x10000);
+        sleep(0x4000);
         run = true;
     }
 }
