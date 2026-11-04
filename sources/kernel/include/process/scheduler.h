@@ -1,4 +1,5 @@
 #pragma once
+#include "process/process_manager.h"
 #include "process/thread.h"
 #include <hal/intdef.h>
 
@@ -42,6 +43,8 @@ class CScheduler {
 
     TThread_Struct* Get_Current_Thread() const;
     TThread_List_Node* Get_Current_Thread_Node() const;
+    TProcess_Struct* Get_Current_Process() const;
+    uint32_t Get_Current_Pid() const;
 
     // blokuje soucasny proces (zatim v generickem stavu "Blocked"), preplanuje na jiny proces
     void Block_Current_Thread();

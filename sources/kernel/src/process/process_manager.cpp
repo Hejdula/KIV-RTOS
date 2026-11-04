@@ -21,9 +21,7 @@
 CProcess_Manager sProcessMgr;
 // CThread_Manager sThreadMgr; kdo je za tohle zodpovedny tomu hlava upadne
 
-CProcess_Manager::CProcess_Manager() : mLast_PID(0), mProcess_List_Head(nullptr), mCurrent_Process_Node(nullptr) {}
-
-TProcess_Struct* CProcess_Manager::Get_Current_Process() const { return mCurrent_Process_Node ? mCurrent_Process_Node->process : nullptr; }
+CProcess_Manager::CProcess_Manager() : mLast_PID(0), mProcess_List_Head(nullptr) {}
 
 CProcess_List_Node* CProcess_Manager::Get_Process_Node_By_PID(uint32_t pid) const {
     CProcess_List_Node* node = mProcess_List_Head;
@@ -88,11 +86,6 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     procnode->prev = nullptr;
     mProcess_List_Head->prev = procnode;
     mProcess_List_Head = procnode;
-
-    // TODO: je tohle k necemu?
-    if (!mCurrent_Process_Node) {
-        mCurrent_Process_Node = procnode;
-    }
 
     // alokace pameti pro process data
     procnode->process = sKernelMem.Alloc<TProcess_Struct>();
@@ -197,7 +190,7 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     return process->pid;
 }
 
-void CProcess_Manager::Terminate_Process(TProcess_Struct* proc){
+void CProcess_Manager::Terminate_Process(TProcess_Struct* proc) {
     // zavreme vsechny soubory procesu
     Close_All_Files(proc);
 
@@ -205,14 +198,14 @@ void CProcess_Manager::Terminate_Process(TProcess_Struct* proc){
     // ukoncit vsechny vlakna az na to ve kterym tohle bezi?
     // zjistit jak to je s poslednim stackem? - uvolneni page-table
     //
-    // nastavit jako zombie + retcode -> nastavit to hlavnimu vlaknu, 
+    // nastavit jako zombie + retcode -> nastavit to hlavnimu vlaknu,
     // ale co kdyz terminate nebezi v hlavnim vlaknu?
 }
 
 uint32_t CProcess_Manager::Map_File_To_Current(IFile* file) {
     // TODO: zamek
 
-    TProcess_Struct* current = Get_Current_Process();
+    TProcess_Struct* current = sScheduler.Get_Current_Process();
     if (!current) {
         return Invalid_Handle;
     }
@@ -240,14 +233,11 @@ uint32_t CProcess_Manager::Map_File_To_Current(IFile* file) {
 }
 
 bool CProcess_Manager::Unmap_File_Current(uint32_t handle) {
-    TProcess_Struct* current = Get_Current_Process();
-    if (!current || handle >= Max_Process_Opened_Files) {
+    TProcess_Struct* current = sScheduler.Get_Current_Process();
+    if (!current || handle >= Max_Process_Opened_Files || !current->opened_files[handle]) {
         return false;
     }
 
-    if (!current->opened_files[handle]) {
-        return false;
-    }
     // posleme vsem vlaknum co na odmapovavany proces cekaji notify, aby se vzbudili (read jim vrati neplatnou hodnotu)
     Notify_Process(current->pid, current->opened_files[handle]); // navratovou hodnotu nepotrebujeme
     current->opened_files[handle] = nullptr;                     // a pak muzeme soubor odmapovat
@@ -283,7 +273,7 @@ void CProcess_Manager::Close_All_Files(TProcess_Struct* process) {
 // Zustane to tady, mame pristup do scheduleru ze ktereho si kdyztak vyzvedneme soucasne vlakno, kdyby bylo potreba
 void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target) {
 
-    TProcess_Struct* cur_process = Get_Current_Process();
+    TProcess_Struct* cur_process = sScheduler.Get_Current_Process();
     // xTODO: signalizace chyby
     if (!cur_process) {
         return;
@@ -392,7 +382,7 @@ void CProcess_Manager::Handle_WaitAll_SWI(uint32_t r0, uint32_t r1, uint32_t r2,
         return;
     }
 
-    TProcess_Struct* cur_process = Get_Current_Process();
+    TProcess_Struct* cur_process = sScheduler.Get_Current_Process();
 
     for (uint32_t i = 0; i < handle_count; i++) {
         if (handles[i] >= Max_Process_Opened_Files || !cur_process->opened_files[handles[i]]) {

@@ -2,6 +2,7 @@
 #include "memory/mmu.h"
 #include "memory/pages.h"
 #include "memory/pt_alloc.h"
+#include "process/process.h"
 #include <process/process_manager.h>
 #include <process/scheduler.h>
 #include <process/thread.h>
@@ -105,6 +106,8 @@ TThread_List_Node* CScheduler::Schedule_EDF() {
 
 TThread_Struct* CScheduler::Get_Current_Thread() const { return mCurrent_Thread; }
 TThread_List_Node* CScheduler::Get_Current_Thread_Node() const { return mCurrent_Thread_Node; };
+TProcess_Struct* CScheduler::Get_Current_Process() const { return mCurrent_Thread ? mCurrent_Thread->process : nullptr; };
+uint32_t CScheduler::Get_Current_Pid() const { return mCurrent_Thread ? mCurrent_Thread->process->pid : Invalid_PID; };
 
 void CScheduler::Block_Current_Thread() {
     TThread_Struct* cur = Get_Current_Thread();
@@ -157,7 +160,7 @@ void CScheduler::Schedule() {
 
     // TODO:
     if (mCleanup_Contents.do_cleanup) {
-        Defered_Cleanup();
+        Deferred_Cleanup();
     }
 }
 
@@ -190,7 +193,7 @@ void CScheduler::Switch_To(TThread_List_Node* node) {
     }
 }
 
-void CScheduler::Set_Up_For_Deferred_Cleanup(bool free_page_table){ 
+void CScheduler::Set_Up_For_Deferred_Cleanup(bool free_page_table) {
     uint32_t* pt = mCurrent_Thread->process->page_table;
 
     // NOTE: pocitame stack z TID a ne aktualniho sp, kdybychom v budoucnu chteli v kernelu resit stack overflow/stack corruption
@@ -206,7 +209,7 @@ void CScheduler::Set_Up_For_Deferred_Cleanup(bool free_page_table){
     };
 }
 
-void CScheduler::Defered_Cleanup(){
+void CScheduler::Deferred_Cleanup() {
     sPage_Manager.Free_Page(mCleanup_Contents.stack_page_phys);
 
     if (mCleanup_Contents.do_free_pt) {
@@ -220,7 +223,6 @@ void CScheduler::Defered_Cleanup(){
 
     mCleanup_Contents.do_cleanup = false;
 }
-
 
 bool CScheduler::Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target) {
     if (!target) {

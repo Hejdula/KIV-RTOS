@@ -336,7 +336,7 @@ class CProc_FS_Driver : public IFilesystem_Driver {
                 // resolve pid + task
                 uint32_t pid = 0;
                 if (self) {
-                    TProcess_Struct *task = sProcessMgr.Get_Current_Process();
+                    TProcess_Struct *task = sScheduler.Get_Current_Process();
                     if (!task) {
                         return nullptr;
                     }

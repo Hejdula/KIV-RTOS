@@ -40,7 +40,7 @@ void CBroadcast_Channel::Reset(uint32_t size) {
 }
 
 uint32_t CBroadcast_Channel::Read(char *buffer, uint32_t len) {
-    uint32_t current_pid = sProcessMgr.Get_Current_Process()->pid;
+    uint32_t current_pid = sScheduler.Get_Current_Pid();
     TReader_Info* reader_info = nullptr;
 
     mMutex.Lock();
@@ -115,7 +115,7 @@ bool CBroadcast_Channel::Close() {
     mMutex.Lock();
 
     // Odstranime zaznam o ctenari pro tento proces
-    uint32_t current_pid = sProcessMgr.Get_Current_Process()->pid;
+    uint32_t current_pid = sScheduler.Get_Current_Pid();
     for (uint32_t i = 0; i < mReader_Count; i++) {
         if (mReaders[i].pid == current_pid) {
             // Presuneme posledni prvek na misto mazaneho (aby pole zustalo spojite)
@@ -136,7 +136,7 @@ bool CBroadcast_Channel::Close() {
 }
 
 bool CBroadcast_Channel::Wait(uint32_t count) {
-    uint32_t current_pid = sProcessMgr.Get_Current_Process()->pid;
+    uint32_t current_pid = sScheduler.Get_Current_Pid();
     TReader_Info* reader_info = nullptr;
 
     mMutex.Lock();
@@ -178,7 +178,7 @@ bool CBroadcast_Channel::Try_Wait_All_Reserve(uint32_t count) {
         return false;
     }
 
-    uint32_t current_pid = sProcessMgr.Get_Current_Process()->pid;
+    uint32_t current_pid = sScheduler.Get_Current_Pid();
     TReader_Info* reader_info = nullptr;
 
     mMutex.Lock();

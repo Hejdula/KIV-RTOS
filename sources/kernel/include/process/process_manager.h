@@ -37,9 +37,8 @@ struct CProcess_List_Node {
 
 class CProcess_Manager {
   private:
-    uint32_t mLast_PID;                        // posledni pridelene PID
-    CProcess_List_Node* mProcess_List_Head;    // uvodni uzel spojoveho seznamu procesu
-    CProcess_List_Node* mCurrent_Process_Node; // uzel procesu prave beziciho vlakna
+    uint32_t mLast_PID;                     // posledni pridelene PID
+    CProcess_List_Node* mProcess_List_Head; // uvodni uzel spojoveho seznamu procesu
 
   private:
   protected:
@@ -49,11 +48,8 @@ class CProcess_Manager {
     // vytvori proces, ktery bude vykonavat zadanou funkci, vraci jeho PID; volitelne muze jit o systemovy proces
     uint32_t Create_Process(unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system);
 
-    // ukonci proces, nastavi ho jako zombie, ukonci vsechny jeho vlakna, zavre soubory, 
-    void Terminate_Process(TProcess_Struct *proc);
-
-    // vrati strukturu procesu, ktery je v tento moment naplanovan
-    TProcess_Struct* Get_Current_Process() const;
+    // ukonci proces, nastavi ho jako zombie, ukonci vsechny jeho vlakna, zavre soubory,
+    void Terminate_Process(TProcess_Struct* proc);
 
     // vrati uzel procesu ve spojovem seznamu procesu dle PID, nebo nullptr, pokud proces neexistuje
     CProcess_List_Node* Get_Process_Node_By_PID(uint32_t pid) const;
