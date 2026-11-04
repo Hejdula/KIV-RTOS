@@ -32,9 +32,9 @@ struct TCPU_Context {
 struct TThread_Struct {
     TCPU_Context cpu_context;       // struct obsahujici stav klicovych registru a pointer na tabulku stranek
     TProcess_Struct* process;       // proces, pod ktery thread spada
-    unsigned int tid;               // thread ID v ramci procesu - TODO zkontrolovat, jestli to k necemu je
+    uint32_t tid;               // thread ID v ramci procesu - TODO zkontrolovat, jestli to k necemu je
     NThread_State state;            // stav vlakna pro ucely planovace
-    unsigned int sched_counter;     // pocitadlo - jakmile je vlakno naplanovano, zkopiruje se do nej priorita procesu a kazdy tik casovace snizuje toto cislo o 1;// na 0 se preplanuje na jine vlakno
+    uint32_t sched_counter;     // pocitadlo - jakmile je vlakno naplanovano, zkopiruje se do nej priorita procesu a kazdy tik casovace snizuje toto cislo o 1;// na 0 se preplanuje na jine vlakno
     uint32_t multi_wait_fd_bitmap;  // bitmapa souboru, na ktere vlakno ceka pri WaitAll - cekani na vice souboru najednou
     bool is_multi_file_wait;        // indikuje, ze proces ceka na vice souboru najednou (WaitAll)
     uint32_t multi_wait_ready_fd;   // soubor, ktery byl prvni pripraven k operaci pri cekani na vice souboru (WaitAll)
@@ -44,7 +44,7 @@ struct TThread_Struct {
                                     // maximalni podporovany rozsah cekani je 0x7FFFFFFF, jelikoz muze citac pretect; diference je vzdy pocitana i s moznosti preteceni
     uint32_t deadline;              // soucasny deadline dokonceni tasku
     uint32_t notified_deadline;     // deadline nastavena po nasledujicim probuzeni vlakna (kolik casu ma vlakno po probuzeni po cekani na neco)
-    unsigned int blocked_on_tid;    // TID vlakna, na ktere ceka (behem joinu na nej)
+    uint32_t blocked_on_tid;    // TID vlakna, na ktere ceka (behem joinu na nej)
 };
 
 // struct jednoznacne identifikujici vlakno v OS

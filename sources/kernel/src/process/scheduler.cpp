@@ -193,7 +193,7 @@ void CScheduler::Switch_To(TThread_List_Node* node) {
     }
 }
 
-void CScheduler::Set_Up_For_Deferred_Cleanup(bool free_page_table) {
+void CScheduler::Sign_Up_For_Deferred_Cleanup(bool free_page_table, bool unlink_thread_node) {
     uint32_t* pt = mCurrent_Thread->process->page_table;
 
     // NOTE: pocitame stack z TID a ne aktualniho sp, kdybychom v budoucnu chteli v kernelu resit stack overflow/stack corruption
@@ -203,8 +203,11 @@ void CScheduler::Set_Up_For_Deferred_Cleanup(bool free_page_table) {
 
     mCleanup_Contents = TDeferred_Thread_Cleanup{
         .do_cleanup = true,
+        .unlink_thread_node = unlink_thread_node,
+        .thread_node = mCurrent_Thread_Node,
         .stack_page_virt = stack_page_virt,
         .stack_page_phys = stack_page_phys,
+        .do_free_pt = free_page_table,
         .page_table = pt,
     };
 }
@@ -219,6 +222,10 @@ void CScheduler::Deferred_Cleanup() {
     } else {
         // unmap stack from pt
         unmap_memory(mCleanup_Contents.page_table, mCleanup_Contents.stack_page_virt);
+    }
+
+    if (mCleanup_Contents.unlink_thread_node){
+        sThread_Manager.Unlink_Thread_Node(mCleanup_Contents.thread_node);
     }
 
     mCleanup_Contents.do_cleanup = false;

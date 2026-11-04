@@ -29,13 +29,14 @@ struct TThread_Struct;
 
 // struktura procesu (tasku, ...)
 struct TProcess_Struct {
-    uint32_t pid;                                   // ID procesu, kladne nenulove cislo
-    uint32_t sched_static_priority;                 // staticka priorita procesu (dana pri jeho vytvareni)
-    IFile* opened_files[Max_Process_Opened_Files];  // otevrene soubory; index je zaroven handle, souborove veci jsou sdilene mezi vlakny, pro ne musime sahat do     
-    int exit_code;                                  // navratovy kod procesu; nastaveny pri terminaci posledniho vlakna
-    uint32_t* page_table;                           // adresa tabulky stranek procesu ve virtualnim prostoru kernelu
-    unsigned long ttbr0;                            // obsah registru pro nastaveni tabulky stranek procesu
-    uint32_t page_count;                            // pocet alokovanych stranek
-    uint32_t thread_count;                          // pocet ZIVYCH vlaken - posledni vlakno nastavuje exit code, kdyz se rovna Max_Process_Threads tak TODO vyhodit chybu
-    TThread_Struct* threads[Max_Process_Threads];   // seznam vsech vlaken procesu
+    uint32_t pid;                                  // ID procesu, kladne nenulove cislo
+    bool is_system;                                // zda-li se jedna o systemovy process
+    uint32_t sched_static_priority;                // staticka priorita procesu (dana pri jeho vytvareni)
+    IFile* opened_files[Max_Process_Opened_Files]; // otevrene soubory; index je zaroven handle, souborove veci jsou sdilene mezi vlakny, pro ne musime sahat do
+    int exit_code;                                 // navratovy kod procesu; nastaveny pri terminaci posledniho vlakna
+    uint32_t* page_table;                          // adresa tabulky stranek procesu ve virtualnim prostoru kernelu
+    unsigned long ttbr0;                           // obsah registru pro nastaveni tabulky stranek procesu
+    uint32_t page_count;                           // pocet alokovanych stranek
+    uint32_t thread_count; // pocet ZIVYCH vlaken - posledni vlakno nastavuje exit code, kdyz se rovna Max_Process_Threads tak TODO vyhodit chybu
+    TThread_Struct* threads[Max_Process_Threads]; // seznam vsech vlaken procesu
 };

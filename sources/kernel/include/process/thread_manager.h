@@ -20,11 +20,6 @@ class CThread_Manager {
     // zalozi prazdne vlakno (alokuje pamet)
     inline TThread_Struct* Alloc_Thread_Struct();
 
-    // odebere uzel z listu vlaken
-    void Unlink_Thread_Node(TThread_List_Node* node);
-    // allocates and links a thread node to the thread list
-    void Link_Thread_Node(TThread_List_Node* node);
-
   public:
     CThread_Manager();
     // TODO: tady uklidit
@@ -56,6 +51,12 @@ class CThread_Manager {
 
     // uvolni zdroje souvisejici s vlaknem, uzel v listu, zasobnik, nelze volat nad hlavnim vlaknem
     void Terminate_Thread(TProcess_Struct* proc, TThread_List_Node* thread_node);
+
+    // odebere uzel z listu vlaken
+    void Unlink_Thread_Node(TThread_List_Node* node);
+
+    // allocates and links a thread node to the thread list
+    void Link_Thread_Node(TThread_List_Node* node);
 };
 
 extern CThread_Manager sThread_Manager;

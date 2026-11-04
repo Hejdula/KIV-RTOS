@@ -56,6 +56,7 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
     // lr = co zacit vykonavat po bootstrapu, 0x8000 je misto, kam je relokovany v kazde nasi binarce symbol _start, tedy vstupni bod programu
     process->threads[0]->cpu_context.lr = 0x8000; // TODO: zjistit proc se tohle dela, vsak to o par radku niz zase prepisu tim z elf souboru
 
+    process->is_system = is_system;
     // pc = "aktualni" kod k provadeni, tedy bootstrap procesu v jadre - lisi se fakticky jen tim, zda je do CPSR vlozen rezim uzivatelsky nebo systemovy,
     // ale teoreticky muzeme chtit pridat jeste dalsi veci specificke pro nejaky z rezimu
     process->threads[0]->cpu_context.pc =
@@ -160,8 +161,7 @@ uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_
     // *new_thread = TThread_Struct{}; // this needs memset to be defined, would be nice for zeroing the structs
     new_thread->cpu_context = TCPU_Context{.lr = func_addr,
                                            .sp = stack_page_virtual + Stack_Size,
-                                           .pc = reinterpret_cast<uint32_t>(&user_process_bootstrap), // TODO: nevim jestli tohle dela co ma
-                                           // taky je treba dedit od procesu jestli je tohle system nebo user bootstrap
+                                           .pc = reinterpret_cast<uint32_t>(process->is_system ? &system_process_bootstrap : &user_process_bootstrap),
                                            .ttbr0 = process->ttbr0};
     new_thread->process = process;
     new_thread->tid = TID;
@@ -181,14 +181,14 @@ void CThread_Manager::Handle_Exit_Thread(TThread_Struct* cur_thread, uint32_t ex
     cur_thread->state = NThread_State::Zombie; // deklarujeme ze je zombie
     cur_thread->exit_code = exit_code;         // natavime exit code
 
-    sScheduler.Set_Up_For_Deferred_Cleanup(cur_thread->tid == 0);
+    sScheduler.Sign_Up_For_Deferred_Cleanup(cur_thread->tid == 0, false);
 
     for (TThread_Struct* thread : cur_thread->process->threads) { // projedeme vsechny vlakna, ktera jsou zablokovana nad "my.join()"
         if (thread->state == NThread_State::Blocked_on_Join && thread->blocked_on_tid == cur_thread->tid) {
             thread->state = NThread_State::Runnable; // a odblokujeme je
         }
-    } 
-    
+    }
+
     sScheduler.Schedule();
 }
 
@@ -238,8 +238,6 @@ bool CThread_Manager::Notify_Thread(PIDTID pidtid, IFile* notifier_file) {
 
     return notified;
 }
-
-// TODO: pridat exit_thread, pridat join
 
 void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target) {
     // TODO: signalizace chyby
@@ -338,7 +336,7 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
 
         case NSWI_Thread_Service::Exit_Thread:
             // terminate process if exitting from main thread
-            if(cur_thread->tid == 0){
+            if (cur_thread->tid == 0) {
                 sProcessMgr.Terminate_Process(cur_thread->process);
             } else {
                 Handle_Exit_Thread(cur_thread, r0);
