@@ -8,6 +8,7 @@ enum class NGet_Sched_Info_Type;
 
 struct TDeferred_Thread_Cleanup {
     bool do_cleanup;
+    bool unlink_thread_node;
     TThread_List_Node* thread_node;
     uint32_t stack_page_virt;
     uint32_t stack_page_phys;
@@ -48,7 +49,11 @@ class CScheduler {
     // ziska info z planovace
     bool Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target);
 
-    void Set_Deferred_Cleanup(bool free_page_table);
+    // Mark this threads stack page to be freed by the next thread planned, optionaly free the whole page table record
+    void Set_Up_For_Deferred_Cleanup(bool free_page_table);
+
+    // Free previous thread stack pointer page and unmap it from page table, optionally free whole page table
+    void Deferred_Cleanup();
 };
 
 extern CScheduler sScheduler;

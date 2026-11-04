@@ -181,7 +181,7 @@ void CThread_Manager::Handle_Exit_Thread(TThread_Struct* cur_thread, uint32_t ex
     cur_thread->state = NThread_State::Zombie; // deklarujeme ze je zombie
     cur_thread->exit_code = exit_code;         // natavime exit code
 
-    sScheduler.Set_Deferred_Cleanup(cur_thread->tid == 0);
+    sScheduler.Set_Up_For_Deferred_Cleanup(cur_thread->tid == 0);
 
     for (TThread_Struct* thread : cur_thread->process->threads) { // projedeme vsechny vlakna, ktera jsou zablokovana nad "my.join()"
         if (thread->state == NThread_State::Blocked_on_Join && thread->blocked_on_tid == cur_thread->tid) {

@@ -1,5 +1,7 @@
 #include "drivers/timer.h"
 #include "memory/mmu.h"
+#include "memory/pages.h"
+#include "memory/pt_alloc.h"
 #include <process/process_manager.h>
 #include <process/scheduler.h>
 #include <process/thread.h>
@@ -155,19 +157,7 @@ void CScheduler::Schedule() {
 
     // TODO:
     if (mCleanup_Contents.do_cleanup) {
-
-        // uint32_t stack_page_phys = (pt[cur_thread->cpu_context.sp / PT_Region_Size] & 0xFFF00000);
-        // sPage_Manager.Free_Page(stack_page_phys);
-        // cur_thread->process->page_count--;
-        //
-        // unmap_memory(pt, stack_page_virt);
-        // // unmap stack page
-        // // unlink thread list node
-        // if (mCleanup_Contents->do_free_pt) {
-        //     // free whole pt
-        // } else {
-        //     // unmap stack from pt
-        // }
+        Defered_Cleanup();
     }
 }
 
@@ -200,22 +190,37 @@ void CScheduler::Switch_To(TThread_List_Node* node) {
     }
 }
 
-void CScheduler::Set_Deferred_Cleanup(bool free_page_table){ 
+void CScheduler::Set_Up_For_Deferred_Cleanup(bool free_page_table){ 
     uint32_t* pt = mCurrent_Thread->process->page_table;
 
     // NOTE: pocitame stack z TID a ne aktualniho sp, kdybychom v budoucnu chteli v kernelu resit stack overflow/stack corruption
     // uint32_t stack_page_virt = (cur_thread->cpu_context.sp / PT_Region_Size) * PT_Region_Size;
     uint32_t stack_page_virt = (Stack_Area_Virtual_Base + Stack_Guard_Size + (Stack_Size + Stack_Guard_Size) * mCurrent_Thread->tid);
-    uint32_t stack_page_phys = (pt[stack_page_virt / PT_Region_Size] & 0xFFFFF000);
+    uint32_t stack_page_phys = (pt[stack_page_virt / PT_Region_Size] & 0xFFF00000);
 
     mCleanup_Contents = TDeferred_Thread_Cleanup{
         .do_cleanup = true,
-        .thread_node = mCurrent_Thread_Node,
         .stack_page_virt = stack_page_virt,
         .stack_page_phys = stack_page_phys,
         .page_table = pt,
     };
 }
+
+void CScheduler::Defered_Cleanup(){
+    sPage_Manager.Free_Page(mCleanup_Contents.stack_page_phys);
+
+    if (mCleanup_Contents.do_free_pt) {
+        // free whole pt
+        sPT_Alloc.Free(mCleanup_Contents.page_table);
+
+    } else {
+        // unmap stack from pt
+        unmap_memory(mCleanup_Contents.page_table, mCleanup_Contents.stack_page_virt);
+    }
+
+    mCleanup_Contents.do_cleanup = false;
+}
+
 
 bool CScheduler::Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target) {
     if (!target) {
