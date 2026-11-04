@@ -93,8 +93,8 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
     if (elf_pc == CELF_Loader::Invalid_Entry_Point) {
         // pokud se nepodarilo nacteni, uvolnime alokovane zdroje a vratime chybu
         sPT_Alloc.Free(pt);
-        sPage_Manager.Free_Page(code_page_phys + mem::MemoryVirtualBase);
-        sPage_Manager.Free_Page(stack_page_phys + mem::MemoryVirtualBase);
+        sPage_Manager.Free_Page(code_page_phys);
+        sPage_Manager.Free_Page(stack_page_phys);
         sKernelMem.Free(process->threads[0]);
         Unlink_Thread_Node(threadnode);
         sKernelMem.Free(threadnode);
