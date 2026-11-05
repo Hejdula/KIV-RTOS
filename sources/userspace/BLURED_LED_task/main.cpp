@@ -47,9 +47,8 @@ uint32_t returning_thread(uint32_t retval) {
 
 int main(int argc, char** argv) {
     uint32_t TID3 = thread(reinterpret_cast<void* (*)(void*)>(&returning_thread), (void*)42);
-
-    uint32_t TID1 = thread(&red);
-    uint32_t TID2 = thread(&blu);
+    uint32_t TID1 = thread(reinterpret_cast<void* (*)()>(&red));
+    uint32_t TID2 = thread(reinterpret_cast<void* (*)()>(&blu));
 
     while (true) {
         sleep(0x1000);

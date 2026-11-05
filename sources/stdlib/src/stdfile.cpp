@@ -169,7 +169,7 @@ void thread_entry_wrapper(uint32_t, uint32_t, uint32_t, uint32_t, uint32_t (*use
     asm volatile("svc #9");
 }
 
-uint32_t thread(void (*func)()){
+uint32_t thread(void* (*func)()){
     uint32_t retcode;
 
     asm volatile("mov r0, %0" : : "r" (func));
