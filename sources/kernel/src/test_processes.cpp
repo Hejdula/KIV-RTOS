@@ -7,5 +7,6 @@
 #include "../../userspace/build/src_BLULED_task.h"
 #include "../../userspace/build/src_REDLED_task.h"
 #include "../../userspace/build/src_BLURED_LED_task.h"
+#include "../../userspace/build/src_DEMO_OLED_task.h"
 
 // az budeme umet cist SD kartu, tento soubor uplne zmizi
