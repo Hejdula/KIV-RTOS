@@ -55,6 +55,7 @@ class IFile {
         };
 
         TWaiting_Task* mWaiting_Tasks = nullptr;
+        TWaiting_Task* mWaiting_Tasks_End = nullptr;
 
         spinlock_t mWait_Lock;
 

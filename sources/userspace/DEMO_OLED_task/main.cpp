@@ -17,11 +17,12 @@ void counter_thread(uint32_t speed_index) {
     int index = speed_index / THREAD_COUNT;
 
     counters[index] = 0;
-    set_task_deadline(0x100);
+    
     while (true) //pro prednasejici predmetu KKY/SWAP " for(;;) {} "
     {
         counters[index]++;
         if (counters[index] >= 10) counters[index] = 0;
+        set_task_deadline(0x200*speed + 0x4000);
         sleep(0x200*speed);
     }
     
@@ -37,8 +38,8 @@ int main(int argc, char** argv) {
     disp.Flip();
     char disp_data[strlen("Counters: 0 0 0 0 0 0 0 0")];
     strncpy(disp_data, "Counters: 0 0 0 0 0 0 0 0", strlen("Counters: 0 0 0 0 0 0 0 0"));
-    set_task_deadline(0x100);
     while (true) {
+        set_task_deadline(0x1000);
         sleep(0x100);
         for (int i = 0; i < THREAD_COUNT; i++) {
             disp_data[10 + i*2] = counters[i] + '0';

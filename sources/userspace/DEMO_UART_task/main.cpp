@@ -11,7 +11,7 @@ volatile uint32_t uart_file;
 volatile uint32_t trng_file;
 
 inline constexpr const uint32_t MAX_SLEEP = 0x400;
-inline constexpr const uint32_t MIN_SLEEP = 0x100;
+inline constexpr const uint32_t MIN_SLEEP = 0x200;
 
 volatile mutex_t uart_mutex;
 
@@ -27,7 +27,7 @@ void uart_thread(uint32_t name) {
     strncpy(msg, MESSAGE, strlen(MESSAGE));
     msg[strlen(MESSAGE) - 3] = name + '0'; // lehce dirty zapis predaneho argumentu
     uint32_t sleep_timer = 0;
-    set_task_deadline(0x100);
+    //set_task_deadline(0x100);
     while (true)
     {
         mutex_lock(uart_mutex);
@@ -39,10 +39,15 @@ void uart_thread(uint32_t name) {
         if (sleep_timer < MIN_SLEEP) { // pokud je doba spanku moc kratka, tak ji prodlouzime nad minimalni pripustnou mez, a zaroven zachovame nahodu
             sleep_timer += MIN_SLEEP; 
         }
+        //debug
+        //sleep_timer = MAX_SLEEP;
+        char debug[10];
+        itoa(sleep_timer, debug, 10);
+        fputs(uart_file, debug);
         fputs(uart_file, msg);
         
         mutex_unlock(uart_mutex);
-
+        set_task_deadline(0x4000 + sleep_timer);
         sleep(sleep_timer);
     }
     
@@ -60,6 +65,7 @@ int main(int argc, char** argv) {
     trng_file = open("DEV:trng", NFile_Open_Mode::Read_Only);
 
     uart_mutex = mutex_create("uart_mutex");
+    
 
     fputs(uart_file, "UART task starting!\n");
 
