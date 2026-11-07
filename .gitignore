@@ -6,3 +6,4 @@ build/*
 # personal VSCode workspaces
 KIV-RTOS.code-workspace
 uart_flasher
+.vscode/settings.json
