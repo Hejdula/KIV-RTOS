@@ -62,7 +62,7 @@ extern "C" int _kernel_main(void) {
     //sProcessMgr.Create_Process(__tilt_task_elf, __tilt_task_elf_len, false);
 
 
-    sProcessMgr.Create_Process(__BLURED_LED_task_elf, __BLURED_LED_task_elf_len, false);
+    //sProcessMgr.Create_Process(__BLURED_LED_task_elf, __BLURED_LED_task_elf_len, false);
     // sProcessMgr.Create_Process(__BLULED_task_elf, __BLULED_task_elf_len, false);
     // sProcessMgr.Create_Process(__REDLED_task_elf, __REDLED_task_elf_len, false);
     sProcessMgr.Create_Process(__DEMO_OLED_task_elf, __DEMO_OLED_task_elf_len, false);

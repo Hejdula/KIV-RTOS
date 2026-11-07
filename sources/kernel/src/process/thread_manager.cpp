@@ -52,6 +52,7 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
     process->threads[0]->notified_deadline = Indefinite;
     process->threads[0]->blocked_on_tid = Invalid_TID;
     process->threads[0]->process = process;
+    process->threads[0]->multi_wait_fd_bitmap = 0;
 
     // adpatace puvodniho kodu zakladani procesu
     // lr = co zacit vykonavat po bootstrapu, 0x8000 je misto, kam je relokovany v kazde nasi binarce symbol _start, tedy vstupni bod programu
@@ -175,6 +176,7 @@ uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_
     new_thread->state = NThread_State::New;
     new_thread->sched_counter = process->sched_static_priority;
     new_thread->is_multi_file_wait = false;
+    new_thread->multi_wait_ready_fd = 0;
     new_thread->deadline = Indefinite;
     new_thread->notified_deadline = Indefinite;
     new_thread->blocked_on_tid = Invalid_TID;
@@ -258,6 +260,9 @@ bool CThread_Manager::Notify_Thread(PIDTID pidtid, IFile* notifier_file) {
         if (thread->is_multi_file_wait) {
             thread->multi_wait_ready_fd = handle_index;
         }
+        notified |= sThread_Manager.Notify_Thread(thread);
+    }
+    if (!thread->is_multi_file_wait) { // pokud vlakno neceka na vice souboru tak ho tenhle MUSI probudit - nikdo jiny to neudela
         notified |= sThread_Manager.Notify_Thread(thread);
     }
 

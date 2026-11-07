@@ -182,12 +182,11 @@ void IFile::Wait_Enqueue_Current() {
     task->next = nullptr;
 
     if (!mWaiting_Tasks) {
-        mWaiting_Tasks = task;  //kdyz nemame zadny cekajici task tak ten co prave enqueueujeme je zaroven zacatek i konec seznamu
-        mWaiting_Tasks_End = task;
-    } else {    // enqueue-back
-        mWaiting_Tasks_End->next = task;
-        task->prev = mWaiting_Tasks_End;
-        mWaiting_Tasks_End = task;
+        mWaiting_Tasks = task;
+    } else {
+        mWaiting_Tasks->prev = task;
+        task->next = mWaiting_Tasks;
+        mWaiting_Tasks = task;
     }
 
     spinlock_unlock(&mWait_Lock);

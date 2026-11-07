@@ -23,11 +23,10 @@ inline static void fputs(uint32_t file, const char* string) { // zapujceno z log
 
 
 void uart_thread(uint32_t name) {
-    char msg[strlen(MESSAGE)];
+    char msg[strlen(MESSAGE)+1];
     strncpy(msg, MESSAGE, strlen(MESSAGE));
     msg[strlen(MESSAGE) - 3] = name + '0'; // lehce dirty zapis predaneho argumentu
     uint32_t sleep_timer = 0;
-    //set_task_deadline(0x100);
     while (true)
     {
         mutex_lock(uart_mutex);
@@ -39,15 +38,16 @@ void uart_thread(uint32_t name) {
         if (sleep_timer < MIN_SLEEP) { // pokud je doba spanku moc kratka, tak ji prodlouzime nad minimalni pripustnou mez, a zaroven zachovame nahodu
             sleep_timer += MIN_SLEEP; 
         }
-        //debug
-        //sleep_timer = MAX_SLEEP;
+        /*debug
+        sleep_timer = MAX_SLEEP;
         char debug[10];
         itoa(sleep_timer, debug, 10);
-        fputs(uart_file, debug);
+        fputs(uart_file, debug);*/
+
         fputs(uart_file, msg);
         
         mutex_unlock(uart_mutex);
-        set_task_deadline(0x4000 + sleep_timer);
+        set_task_deadline(0x400 + sleep_timer);
         sleep(sleep_timer);
     }
     
