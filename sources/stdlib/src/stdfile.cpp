@@ -10,6 +10,15 @@ uint32_t getpid() {
     return pid;
 }
 
+uint32_t gettid() {
+    uint32_t tid;
+
+    asm volatile("swi 6");
+    asm volatile("mov %0, r0" : "=r" (tid));
+
+    return tid;
+}
+
 void terminate(int exitcode) {
     asm volatile("mov r0, %0" : : "r" (exitcode));
     asm volatile("swi 1");

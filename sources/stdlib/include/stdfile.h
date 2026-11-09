@@ -6,6 +6,7 @@
 #include <process/process_manager.h>
 
 uint32_t getpid();
+uint32_t gettid();
 void terminate(int exitcode);
 void sched_yield();
 uint32_t get_active_process_count();
