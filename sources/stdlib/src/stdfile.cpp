@@ -138,6 +138,17 @@ uint32_t get_active_process_count() {
     return retval;
 }
 
+uint32_t get_active_thread_count() {
+    const NGet_Sched_Info_Type req = NGet_Sched_Info_Type::Active_Thread_Count;
+    uint32_t retval;
+
+    asm volatile("mov r0, %0" : : "r" (req));
+    asm volatile("mov r1, %0" : : "r" (&retval));
+    asm volatile("swi 4");
+
+    return retval;
+}
+
 uint32_t get_tick_count() {
     const NGet_Sched_Info_Type req = NGet_Sched_Info_Type::Tick_Count;
     uint32_t retval;
