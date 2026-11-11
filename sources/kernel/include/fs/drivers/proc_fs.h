@@ -205,8 +205,8 @@ class CProcFS_Task_File__Page_Count : public CProcFS_Task_File {
 class CProcFS_Global_File__Scheduler final : public CProcFS_Global_File {
     public:
         virtual uint32_t Read(char* buffer, uint32_t num) override {
-            CProcess_Summary_Info info;
-            sScheduler.Get_Scheduler_Info(NGet_Sched_Info_Type::Process_Summary, &info);
+            TThreads_Summary_Info info;
+            sScheduler.Get_Scheduler_Info(NGet_Sched_Info_Type::Threads_Summary, &info);
 
             strncat(buffer, "runnable: ", num);
             itoa(info.running, buffer + strlen(buffer), 10);
@@ -226,8 +226,8 @@ class CProcFS_Global_File__Scheduler final : public CProcFS_Global_File {
 class CProcFS_Global_File__Tasks final : public CProcFS_Global_File {
     public:
         virtual uint32_t Read(char* buffer, uint32_t num) override {
-            CProcess_Summary_Info info;
-            sScheduler.Get_Scheduler_Info(NGet_Sched_Info_Type::Process_Summary, &info);
+            TThreads_Summary_Info info;
+            sScheduler.Get_Scheduler_Info(NGet_Sched_Info_Type::Threads_Summary, &info);
 
             itoa(info.total, buffer, 10);
 
