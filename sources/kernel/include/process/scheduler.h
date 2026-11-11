@@ -7,6 +7,13 @@ struct TThread_Struct;
 struct TThread_List_Node;
 enum class NGet_Sched_Info_Type;
 
+struct TThreads_Summary_Info {
+    uint32_t total;   // celkovy pocet vlaken v systemu
+    uint32_t running; // runnable, running
+    uint32_t blocked; // blocked, interruptable_sleep, blocked_on_join
+    uint32_t zombie;  // zombie
+};
+
 struct TDeferred_Thread_Cleanup {
     bool do_cleanup;
     bool unlink_thread_node;

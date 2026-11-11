@@ -23,8 +23,8 @@ CProcess_Manager sProcessMgr;
 
 CProcess_Manager::CProcess_Manager() : mLast_PID(0), mProcess_List_Head(nullptr) {}
 
-CProcess_List_Node* CProcess_Manager::Get_Process_Node_By_PID(uint32_t pid) const {
-    CProcess_List_Node* node = mProcess_List_Head;
+TProcess_List_Node* CProcess_Manager::Get_Process_Node_By_PID(uint32_t pid) const {
+    TProcess_List_Node* node = mProcess_List_Head;
     while (node != nullptr) {
         if (node->process->pid == pid) {
             return node;
@@ -37,7 +37,7 @@ CProcess_List_Node* CProcess_Manager::Get_Process_Node_By_PID(uint32_t pid) cons
 }
 
 TProcess_Struct* CProcess_Manager::Get_Process_By_PID(uint32_t pid) const {
-    CProcess_List_Node* node = Get_Process_Node_By_PID(pid);
+    TProcess_List_Node* node = Get_Process_Node_By_PID(pid);
     if (!node) {
         return nullptr;
     }
@@ -83,7 +83,7 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
         return Invalid_PID;
     }
     
-    CProcess_List_Node* procnode = sKernelMem.Alloc<CProcess_List_Node>();
+    TProcess_List_Node* procnode = sKernelMem.Alloc<TProcess_List_Node>();
 
     // zarazeni do spojoveho seznamu procesu
     procnode->next = mProcess_List_Head;
@@ -450,7 +450,7 @@ void CProcess_Manager::Handle_WaitAll_SWI(uint32_t r0, uint32_t r1, uint32_t r2,
 }
 
 uint32_t CProcess_Manager::Get_Page_Count() {
-    CProcess_List_Node* node = mProcess_List_Head;
+    TProcess_List_Node* node = mProcess_List_Head;
     uint32_t c = 0;
     while (node != nullptr) {
         c += node->process->page_count;
@@ -461,7 +461,7 @@ uint32_t CProcess_Manager::Get_Page_Count() {
 }
 
 uint32_t CProcess_Manager::Get_File_Count() {
-    CProcess_List_Node* node = mProcess_List_Head;
+    TProcess_List_Node* node = mProcess_List_Head;
     uint32_t c = 0;
     while (node != nullptr) {
         for (int i = 0; i < Max_Process_Opened_Files; i++) {

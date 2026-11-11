@@ -11,6 +11,9 @@ struct TThread_List_Node {
     TThread_Struct* thread;
 };
 
+
+
+
 constexpr uint32_t Invalid_TID = static_cast<uint32_t>(-1);
 
 class CThread_Manager {

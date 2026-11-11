@@ -238,11 +238,10 @@ bool CScheduler::Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target) {
 
     switch (type) {
         case NGet_Sched_Info_Type::Active_Process_Count: {
-            TThread_List_Node* node = sThread_Manager.Get_Thread_List_Head();
+            TProcess_List_Node* node = sProcessMgr.Get_Process_List_Head();
             uint32_t procCnt = 0;
             while (node) {
-                if (node->thread->state == NThread_State::Running || node->thread->state == NThread_State::Runnable ||
-                    node->thread->state == NThread_State::New) {
+                if (node->process->threads[0]->state != NThread_State::Zombie) {
                     procCnt++;
                 }
 
@@ -252,18 +251,33 @@ bool CScheduler::Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target) {
             *reinterpret_cast<uint32_t*>(target) = procCnt;
             break;
         }
+        case NGet_Sched_Info_Type::Active_Thread_Count: {
+            TThread_List_Node* node = sThread_Manager.Get_Thread_List_Head();
+            uint32_t threadCnt = 0;
+            while (node) {
+                if (node->thread->state == NThread_State::Running || node->thread->state == NThread_State::Runnable ||
+                    node->thread->state == NThread_State::New) {
+                    threadCnt++;
+                }
+
+                node = node->next;
+            }
+
+            *reinterpret_cast<uint32_t*>(target) = threadCnt;
+            break;
+        }
         case NGet_Sched_Info_Type::Tick_Count: {
             *reinterpret_cast<uint32_t*>(target) = sTimer.Get_Tick_Count();
             break;
         }
-        case NGet_Sched_Info_Type::Process_Summary: {
-            // TODO: predelat aby to odpovidalo bud process summary, nebo rename na thread summary
+        case NGet_Sched_Info_Type::Threads_Summary: {
+            // pTODO: predelat aby to odpovidalo bud process summary, nebo rename na thread summary
             // idealne udelat oboji at tu je process i thread summary, a pripojit do procfs summary
             TThread_List_Node* node = sThread_Manager.Get_Thread_List_Head();
             uint32_t procCnt = 0;
 
-            CProcess_Summary_Info* sum = reinterpret_cast<CProcess_Summary_Info*>(target);
-            bzero(sum, sizeof(CProcess_Summary_Info));
+            TThreads_Summary_Info* sum = reinterpret_cast<TThreads_Summary_Info*>(target);
+            bzero(sum, sizeof(TThreads_Summary_Info));
 
             while (node) {
                 switch (node->thread->state) {
@@ -272,6 +286,7 @@ bool CScheduler::Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target) {
                         sum->running++;
                         break;
                     case NThread_State::Blocked:
+                    case NThread_State::Blocked_on_Join:
                     case NThread_State::Interruptable_Sleep:
                         sum->blocked++;
                         break;

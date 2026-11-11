@@ -10,9 +10,10 @@ constexpr uint32_t Invalid_PID = static_cast<uint32_t>(-1);
 
 // podtypy pro Get_Sched_Info syscall
 enum class NGet_Sched_Info_Type {
-    Active_Process_Count = 0, // pocet procesu, ktere jsou aktivne planovane (Runnable + Running)
-    Tick_Count = 1,           // pocet ticku casovace
-    Process_Summary = 2,
+    Active_Process_Count = 0,   // pocet procesu, ktere maji alespon jedno vlakno (zombie process = thread_count == 0)
+    Tick_Count = 1,             // pocet ticku casovace
+    Threads_Summary = 2,        // statistiky o vlaknach v systemu (kolik jich je v jakem stavu)
+    Active_Thread_Count = 3,    // pocet vlaken, ktere jsou aktivne planovane (Runnable + Running)
 };
 
 // deadline syscall
@@ -21,24 +22,18 @@ enum class NDeadline_Subservice {
     Get_Remaining = 1, // ziska zbyvajici cas do deadline
 };
 
-struct CProcess_Summary_Info {
-    uint32_t total;   // celkovy pocet tasku
-    uint32_t running; // runnable, running
-    uint32_t blocked; // blocked, interruptable_sleep
-    uint32_t zombie;  // zombie
-};
 
 // struktura uzlu v seznamu procesu
-struct CProcess_List_Node {
-    CProcess_List_Node* prev;
-    CProcess_List_Node* next;
+struct TProcess_List_Node {
+    TProcess_List_Node* prev;
+    TProcess_List_Node* next;
     TProcess_Struct* process;
 };
 
 class CProcess_Manager {
   private:
     uint32_t mLast_PID;                     // posledni pridelene PID
-    CProcess_List_Node* mProcess_List_Head; // uvodni uzel spojoveho seznamu procesu
+    TProcess_List_Node* mProcess_List_Head; // uvodni uzel spojoveho seznamu procesu
 
   private:
   protected:
@@ -52,7 +47,7 @@ class CProcess_Manager {
     void Terminate_Process(TProcess_Struct* proc);
 
     // vrati uzel procesu ve spojovem seznamu procesu dle PID, nebo nullptr, pokud proces neexistuje
-    CProcess_List_Node* Get_Process_Node_By_PID(uint32_t pid) const;
+    TProcess_List_Node* Get_Process_Node_By_PID(uint32_t pid) const;
 
     // vrati strukturu procesu se zadanym PID, nebo nullptr, pokud proces neexistuje
     TProcess_Struct* Get_Process_By_PID(uint32_t pid) const;
@@ -79,6 +74,8 @@ class CProcess_Manager {
     uint32_t Get_Page_Count();
     // ziska celkovy pocet otevrenyh souboru
     uint32_t Get_File_Count();
+
+    TProcess_List_Node* Get_Process_List_Head() { return mProcess_List_Head; };
 };
 
 extern CProcess_Manager sProcessMgr;
