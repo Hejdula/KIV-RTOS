@@ -346,7 +346,7 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             cur_thread->blocked_on_tid = Invalid_TID; // takze nastavime ze na nikoho necekame
             target.r0 = target_thread->exit_code;
 
-            // TODO: tohle prochazeni by se dalo nahradit pocitadlem kolik threadu na nej ceka, ale neni to nutne
+            // dTODO: tohle prochazeni by se dalo nahradit pocitadlem kolik threadu na nej ceka, ale neni to nutne
             bool others_waiting = false;
             for (TThread_Struct* thread : cur_thread->process->threads) { // projedeme vsechny vlakna,
                 // ktera jsou odblokovana nad timto vlaknem, ale jeste si nevyzvedla navratovou hodnotu

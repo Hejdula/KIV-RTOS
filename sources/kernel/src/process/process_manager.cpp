@@ -78,7 +78,11 @@ bool CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file) {
     return notified_some;
 }
 
-uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system) {
+uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system, uint32_t sched_static_priority) {
+    if (sched_static_priority == 0) { // pokud nekdo vyrobil proces se statickou prioritou 1 tak nema cenu ho vubec vytvaret, planovac by ho nikdy nenaplanoval
+        return Invalid_PID;
+    }
+    
     CProcess_List_Node* procnode = sKernelMem.Alloc<CProcess_List_Node>();
 
     // zarazeni do spojoveho seznamu procesu
@@ -92,8 +96,8 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     auto* process = procnode->process;
     // nastaveni process data
     process->pid = ++mLast_PID;
-    process->sched_static_priority = 5; // xTODO: pro ted je to jen hardcoded hodnota, do budoucna urcite bude nutne dovolit specifikovat - by se mohlo proste
-                                        // predavat jako argument funkce...
+    process->sched_static_priority = sched_static_priority; // dTODO: pro ted je to jen hardcoded hodnota, do budoucna urcite bude nutne dovolit specifikovat - by se mohlo proste
+                                        // predavat jako argument funkce... a vychozi hodnota 5 je zachovana
     process->page_count = 0;
     process->thread_count = 0;
 

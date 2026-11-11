@@ -46,7 +46,7 @@ class CProcess_Manager {
     CProcess_Manager();
 
     // vytvori proces, ktery bude vykonavat zadanou funkci, vraci jeho PID; volitelne muze jit o systemovy proces
-    uint32_t Create_Process(unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system);
+    uint32_t Create_Process(unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system, uint32_t sched_static_priority = 5);
 
     // ukonci proces, nastavi ho jako zombie, ukonci vsechny jeho vlakna, zavre soubory,
     void Terminate_Process(TProcess_Struct* proc);
