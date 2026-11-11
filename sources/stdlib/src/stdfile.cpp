@@ -201,6 +201,16 @@ uint32_t thread(void* (*func)(void*), void* arg){
     return retcode;
 }
 
+uint32_t join(uint32_t target) {
+    uint32_t result;
+
+    asm volatile("mov r0, %0" : : "r" (target));
+    asm volatile("swi 8");
+    asm volatile("mov %0, r0" : "=r" (result));
+
+    return result;
+}
+
 const char Pipe_File_Prefix[] = "SYS:pipe/";
 
 uint32_t pipe(const char* name, uint32_t buf_size) {
