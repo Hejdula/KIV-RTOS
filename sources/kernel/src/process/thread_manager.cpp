@@ -34,7 +34,7 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
 
     TThread_List_Node* threadnode = sKernelMem.Alloc<TThread_List_Node>();
     if (!threadnode) {
-        return Invalid_TID; // Allocation failed
+        return Invalid_TID; // Alokace selhala
     }
 
     Link_Thread_Node(threadnode);
@@ -118,7 +118,7 @@ uint32_t CThread_Manager::Create_First_Thread(TProcess_Struct* process, unsigned
 
 uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_addr, uint32_t arg, uint32_t userspace_thread_wrapper) {
     uint32_t TID = Invalid_TID;
-    { // first fit available TID
+    { // first fit na dostupny TID
         for (uint32_t i = 0; i < Max_Process_Threads; ++i) {
             if (process->threads[i] == nullptr) {
                 TID = i;
@@ -133,13 +133,13 @@ uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_
 
     TThread_List_Node* threadnode = sKernelMem.Alloc<TThread_List_Node>();
     if (!threadnode) {
-        return Invalid_TID; // Allocation failed
+        return Invalid_TID; // Alokace selhala
     }
 
     TThread_Struct* new_thread = Alloc_Thread_Struct();
     if (!new_thread) {
         sKernelMem.Free(threadnode);
-        return Invalid_TID; // Allocation failed
+        return Invalid_TID; // Alokace selhala
     }
 
     // zaradit do listu TThread_Struct
@@ -166,7 +166,7 @@ uint32_t CThread_Manager::Create_Thread(TProcess_Struct* process, uint32_t func_
 
     uint32_t stack_offset = reinterpret_cast<uint32_t>(kernel_stack_top) - (stack_page_phys + mem::MemoryVirtualBase);
 
-    // *new_thread = TThread_Struct{}; // this needs memset to be defined, would be nice for zeroing the structs
+    // *new_thread = TThread_Struct{}; // toto by potrebovalo memset (hodilo by se pro nulovani structu)
     new_thread->cpu_context = TCPU_Context{.lr = userspace_thread_wrapper,
                                            .sp = stack_page_virtual + stack_offset,
                                            .pc = reinterpret_cast<uint32_t>(process->is_system ? &system_process_bootstrap : &user_process_bootstrap),
@@ -346,7 +346,7 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
             cur_thread->blocked_on_tid = Invalid_TID; // takze nastavime ze na nikoho necekame
             target.r0 = target_thread->exit_code;
 
-            // dTODO: tohle prochazeni by se dalo nahradit pocitadlem kolik threadu na nej ceka, ale neni to nutne
+            // tohle prochazeni by se dalo nahradit pocitadlem kolik threadu na nej ceka, ale neni to nutne
             bool others_waiting = false;
             for (TThread_Struct* thread : cur_thread->process->threads) { // projedeme vsechny vlakna,
                 // ktera jsou odblokovana nad timto vlaknem, ale jeste si nevyzvedla navratovou hodnotu
@@ -365,7 +365,7 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
         }
 
         case NSWI_Thread_Service::Exit_Thread:
-            // terminate process if exitting from main thread
+            // pokud konci hlavni vlakno procesu tak ho terminuji
             if (cur_thread->tid == 0) {
                 sProcessMgr.Terminate_Process(cur_thread->process);
             } else {

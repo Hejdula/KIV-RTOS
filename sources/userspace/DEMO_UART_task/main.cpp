@@ -38,11 +38,6 @@ void uart_thread(uint32_t name) {
         if (sleep_timer < MIN_SLEEP) { // pokud je doba spanku moc kratka, tak ji prodlouzime nad minimalni pripustnou mez, a zaroven zachovame nahodu
             sleep_timer += MIN_SLEEP; 
         }
-        /*debug
-        sleep_timer = MAX_SLEEP;
-        char debug[10];
-        itoa(sleep_timer, debug, 10);
-        fputs(uart_file, debug);*/
 
         fputs(uart_file, msg);
         

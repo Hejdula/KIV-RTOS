@@ -19,7 +19,6 @@
 #include <drivers/uart.h>
 
 CProcess_Manager sProcessMgr;
-// CThread_Manager sThreadMgr; kdo je za tohle zodpovedny tomu hlava upadne
 
 CProcess_Manager::CProcess_Manager() : mLast_PID(0), mProcess_List_Head(nullptr) {}
 
@@ -44,7 +43,6 @@ TProcess_Struct* CProcess_Manager::Get_Process_By_PID(uint32_t pid) const {
     return node->process;
 }
 
-// pozn.: tohle se nepouziva
 bool CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file) {
     TProcess_Struct* process = Get_Process_By_PID(pid);
     if (!process) {
@@ -96,16 +94,10 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     auto* process = procnode->process;
     // nastaveni process data
     process->pid = ++mLast_PID;
-    process->sched_static_priority = sched_static_priority; // dTODO: pro ted je to jen hardcoded hodnota, do budoucna urcite bude nutne dovolit specifikovat - by se mohlo proste
-                                        // predavat jako argument funkce... a vychozi hodnota 5 je zachovana
+    process->sched_static_priority = sched_static_priority; 
     process->page_count = 0;
     process->thread_count = 0;
 
-    /* DTODO: - co by se tu melo dit - DONE
-        - volam zakladani prvniho threadu - asi funkce "create first thread", ktera bude volat "create thread", ktera bude volana handlerem neceho jako
-       "pthread_create()"
-        - inkrementovat pocitadlo threadu, dat do seznamu threadu prvni thread
-    */
     // nullpointery na vsechna vlakna - zakladat se da jenom tam kde je nullpointer (hlida thread manager)
     for (uint32_t i = 0; i < Max_Process_Threads; i++) {
         process->threads[i] = nullptr;
@@ -119,72 +111,6 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
         return Invalid_PID;
     }
 
-    /* DTODO: tyhle veci se budou zakladat v threadu
-    - dedime od processu
-    - haldu resit nemusime, o tu si thread rika syscallem
-    - vytvorit tabulku stranek pro process.
-    - alokovat stranku pro kod a dat ho tam stejne jako ted
-    - vytvoreni prvniho thread a jeho zasobniku + pc na entry point kodu
-
-
-
-    process->sched_counter = process->sched_static_priority;
-    process->state = Nprocess_State::New;
-    process->deadline = Indefinite; // process si zatim nestanovil deadline, udela to az to bude aktualni v deadline syscallu
-    process->notified_deadline = Indefinite;
-    process->page_count = 0;
-
-
-    // lr = co zacit vykonavat po bootstrapu, 0x8000 je misto, kam je relokovany v kazde nasi binarce symbol _start, tedy vstupni bod programu
-    //process->cpu_context.lr = 0x8000;
-    // nyni mame ale implementovany i ELF loader, takze po nacteni ELF souboru lze vycist, kde je vlastne vstupni bod programu
-
-    // pc = "aktualni" kod k provadeni, tedy bootstrap procesu v jadre - lisi se fakticky jen tim, zda je do CPSR vlozen rezim uzivatelsky nebo systemovy,
-    // ale teoreticky muzeme chtit pridat jeste dalsi veci specificke pro nejaky z rezimu
-    process->cpu_context.pc = is_system ? reinterpret_cast<unsigned long>(&system_process_bootstrap) : reinterpret_cast<unsigned long>(&user_process_bootstrap);
-    // sp = zasobnik, vzdy je relokovany na nejakou fixni pamet, pro nas je jednoduche volit ho o velikosti 1MB
-    // pozn. zasobnik roste na druhou stranu, takze musime SP nastavit na konec stranky
-    process->cpu_context.sp = 0x90000000 + mem::PageSize;
-
-    // alokujeme stranku pro kod a pro zasobnik
-    uint32_t code_page_phys = static_cast<unsigned long>(sPage_Manager.Alloc_Page()) - mem::MemoryVirtualBase;
-    uint32_t stack_page_phys = static_cast<unsigned long>(sPage_Manager.Alloc_Page()) - mem::MemoryVirtualBase;
-    process->page_count += 2;
-
-    // alokujeme tabulku stranek procesu z poolu
-    uint32_t* pt = sPT_Alloc.Alloc();
-
-    // zkopirujeme zakladni kernelovou tabulku - to proto, aby zustalo mapovani 0xFxxxxxxx a 0xCxxxxxxx adres (kod a data) a mohli jsme vykonavat
-    // napr. obsluhu systemoveho volani beze zmeny adresniho prostoru
-    // pozn.: tohle kopirovani se da odbourat korektnim pouzitim TTBR1 - pak by TTBR1 prekladal vse napr. od 0x8xxxxxxx vyse a TTBR0 by zustal pro spodni cast
-    adr. rozsahu
-    //        pro jednoduchost ted nechme takto, dvojice bazovych registru pro tabulky stranek jsou spise specialita ARMu a pribuznych procesoru
-    copy_kernel_page_table_to(pt);
-
-    // namapujeme kodovou stranku na zacatek virtualni pameti
-    map_memory(pt, code_page_phys, 0x00000000);
-    // namapujeme zasobnik na 0x90000000
-    map_memory(pt, stack_page_phys, 0x90000000);
-
-    // nakopirujeme kod do kodove stranky, vysledkem nacitani je i PC vstupniho bodu procesu
-    const uint32_t elf_pc = CELF_Loader::Load_ELF32_Image(elf_file_data, reinterpret_cast<unsigned char*>(code_page_phys) + mem::MemoryVirtualBase,
-    mem::PageSize); if (elf_pc == CELF_Loader::Invalid_Entry_Point) {
-        // pokud se nepodarilo nacteni, uvolnime alokovane zdroje a vratime chybu
-        sPT_Alloc.Free(pt);
-        sPage_Manager.Free_Page(code_page_phys + mem::MemoryVirtualBase);
-        sPage_Manager.Free_Page(stack_page_phys + mem::MemoryVirtualBase);
-        sKernelMem.Free(procnode->process);
-        sKernelMem.Free(procnode);
-        return Invalid_PID;
-    }
-
-    // nastavime PC procesu na vstupni bod programu, ktery jsme nacetli z ELF souboru
-    process->cpu_context.lr = elf_pc;
-
-    // nastavime ulozene TTBR0 procesu - tady musi byt fyzicka adresa, proto odecitame bazi (vsechny fyzicke adresy jsou v kernelovem modu mapovany na
-    "0xC0000000 + offset") process->cpu_context.ttbr0 = (reinterpret_cast<unsigned long>(pt) - mem::MemoryVirtualBase) | TTBR_Flags::Inner_Cacheable |
-    TTBR_Flags::Shared;
-    */
 
     // nullpointery na otevrene soubory
     for (uint32_t i = 0; i < Max_Process_Opened_Files; i++) {
@@ -207,7 +133,7 @@ void CProcess_Manager::Terminate_Process(TProcess_Struct* proc) {
 }
 
 uint32_t CProcess_Manager::Map_File_To_Current(IFile* file) {
-    // TODO: zamek
+    // xTODO: zamek
 
     TProcess_Struct* current = sScheduler.Get_Current_Process();
     if (!current) {
@@ -246,17 +172,6 @@ bool CProcess_Manager::Unmap_File_Current(uint32_t handle) {
     Notify_Process(current->pid, current->opened_files[handle]); // navratovou hodnotu nepotrebujeme
     current->opened_files[handle] = nullptr;                     // a pak muzeme soubor odmapovat
 
-    // reseni implementovano
-    // xTODO: bude treba resit kdyz ruzne threads na soubor cekaji,
-    // ted se tohle stalo jen kdyz proces bezel a zavolal close,
-    // handle se invalidovalo a pak uz nemohl nad nim cekat, ale ted muze close
-    // zavolat jakekoli vlakno a tim padem ostatni kdo cekaji se musi vzbudit.
-    // Co kdyz se mezitim nez se thread vzbudi na handle namapuje jiny soubor a tedy
-    // jinemu thread se zmeni soubor na ktery ceka aniz by to vedel?
-    // Nebo spise kazde vlakno ma svou bitmap s otevrenymi files a soubor ho
-    // zavre jen kdyz uz zadne z vlaken nema soubor otevreny a pak by se tohle muselo
-    // o level vyse v Handle_xxx_SWI
-
     return true;
 }
 
@@ -273,8 +188,6 @@ void CProcess_Manager::Close_All_Files(TProcess_Struct* process) {
     }
 }
 
-// dTODO: kam patri tohle
-// Zustane to tady, mame pristup do scheduleru ze ktereho si kdyztak vyzvedneme soucasne vlakno, kdyby bylo potreba
 void CProcess_Manager::Handle_Filesystem_SWI(NSWI_Filesystem_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target) {
 
     TProcess_Struct* cur_process = sScheduler.Get_Current_Process();

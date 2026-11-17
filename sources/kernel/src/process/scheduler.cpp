@@ -87,7 +87,7 @@ TThread_List_Node* CScheduler::Schedule_EDF() {
             // pokud tento proces ma deadline...
         } else if (itr->thread->deadline != Indefinite) {
             // vybereme ho jen pokud je deadline drivejsi, nez aktualne vybraneho procesu
-            // TODO: preteceni uint32_t
+            // xTODO: preteceni uint32_t
             if (next->thread->deadline > itr->thread->deadline) {
                 next = itr;
             }
@@ -122,12 +122,6 @@ void CScheduler::Block_Current_Thread() {
 }
 
 void CScheduler::Schedule() {
-    // inicializace neni potreba, kdyztak ji dela planovac
-    /*if (!mCurrent_Thread) {
-        mCurrent_Thread_Node = sThread_Manager.Get_Thread_List_Head();
-        mCurrent_Thread = mCurrent_Thread_Node->thread;
-    }*/
-
     // projdeme vsechny uspane (sleep) procesy, zda je na case je vzbudit
     {
         TThread_List_Node* node = sThread_Manager.Get_Thread_List_Head();
@@ -158,7 +152,7 @@ void CScheduler::Schedule() {
 
     Switch_To(next);
 
-    // TODO:
+    // pokud je co uklizet tak uklidime (ted jsme v kontextu noveho vlakna, takze muzeme uklizet po starem)
     if (mCleanup_Contents.do_cleanup) {
         Deferred_Cleanup();
     }
@@ -180,8 +174,6 @@ void CScheduler::Switch_To(TThread_List_Node* node) {
     mCurrent_Thread = node->thread;
     bool is_first_time = (mCurrent_Thread->state == NThread_State::New);
     mCurrent_Thread_Node = node;
-    // TODO: nastavit current process u process manageru
-    // + zamyslet se kde by to melo byt, jestli tady ve scheduleru nebo to nechat v procesu
     mCurrent_Thread->sched_counter = mCurrent_Thread->process->sched_static_priority;
     mCurrent_Thread->state = NThread_State::Running;
 
@@ -216,15 +208,16 @@ void CScheduler::Deferred_Cleanup() {
     sPage_Manager.Free_Page(mCleanup_Contents.stack_page_phys);
 
     if (mCleanup_Contents.do_free_pt) {
-        // free whole pt
+        // uvolni celou tabulku stranek
         sPT_Alloc.Free(mCleanup_Contents.page_table);
 
     } else {
-        // unmap stack from pt
+        // odmapuj zasobnik z tabulky stranek
         unmap_memory(mCleanup_Contents.page_table, mCleanup_Contents.stack_page_virt);
     }
 
     if (mCleanup_Contents.unlink_thread_node){
+        // odstran zaznam ze seznamu vlaken
         sThread_Manager.Unlink_Thread_Node(mCleanup_Contents.thread_node);
     }
 

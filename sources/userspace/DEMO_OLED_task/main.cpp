@@ -1,9 +1,9 @@
 #include <stdfile.h>
 #include <stdstring.h>
 
-//#include <drivers/gpio.h>
+
 #include <oled.h>
-//#include <process/process_manager.h>
+
 
 inline constexpr const int THREAD_COUNT = 8;
 

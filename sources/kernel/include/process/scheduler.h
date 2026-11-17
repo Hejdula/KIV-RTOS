@@ -60,11 +60,11 @@ class CScheduler {
     bool Get_Scheduler_Info(NGet_Sched_Info_Type type, void* target);
 
     // Oznacime stranku stacku aktualniho vlakna na uvolneni dalsim naplanovanym vlankem
-    // NOTE: due to round-robin scheduler using the current thread node in calculation, 
-    // we shall not unlink the current thread from thread list before invoking schedule() so that it can traverse the list
+    // POZN: protoze round-robin planovac pouziva soucasny uzel pro zjisteni nasledujiciho vlakna, 
+    // nemuzeme odebrat soucasne vlakno ze seznamu pred zavolanim schedule()
     void Sign_Up_For_Deferred_Cleanup(bool free_page_table, bool unlink_thread_node);
 
-    // Free previous thread stack pointer page and unmap it from page table, optionally free whole page table
+    // Uvolni stranku planovace zaregistrovaneho vlakna a odmapuje ji z tabulky stranek, pripadne odmapuje celou tabulku stranek dle obsahu mCleanup_Contents
     void Deferred_Cleanup();
 };
 

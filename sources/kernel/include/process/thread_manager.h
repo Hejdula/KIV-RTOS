@@ -25,7 +25,6 @@ class CThread_Manager {
 
   public:
     CThread_Manager();
-    // TODO: tady uklidit
 
     // Vytvori prvni vlakno procesu, nahraje kod do pameti
     uint32_t Create_First_Thread(TProcess_Struct* process, unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system);
@@ -45,6 +44,7 @@ class CThread_Manager {
     // softwarova preruseni pro process facility
     void Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0, uint32_t r1, uint32_t r2, TSWI_Result& target);
 
+    // ziska dvojci PID a TID daneho vlakna (jednoznacny identifikator)
     static PIDTID GetPIDTID(const TThread_Struct* thread);
 
     // getter uvodniho uzlu listu vlaken
@@ -59,7 +59,7 @@ class CThread_Manager {
     // odebere uzel z listu vlaken
     void Unlink_Thread_Node(TThread_List_Node* node);
 
-    // allocates and links a thread node to the thread list
+    // prida uzel do listu vlaken
     void Link_Thread_Node(TThread_List_Node* node);
 };
 

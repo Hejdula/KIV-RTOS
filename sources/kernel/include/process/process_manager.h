@@ -72,9 +72,11 @@ class CProcess_Manager {
 
     // ziska celkovy pocet alokovanch stranek tasky
     uint32_t Get_Page_Count();
+    
     // ziska celkovy pocet otevrenyh souboru
     uint32_t Get_File_Count();
 
+    // ziska prvni uzel seznamu procesu
     TProcess_List_Node* Get_Process_List_Head() { return mProcess_List_Head; };
 };
 

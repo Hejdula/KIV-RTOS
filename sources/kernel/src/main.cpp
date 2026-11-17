@@ -52,17 +52,16 @@ extern "C" int _kernel_main(void) {
 
 
     // vytvoreni vsech tasku
-    // TODO: presunuti do init procesu a nejake inicializacni sekce
-
+    // zde zakomentovane procesy na zarizeni funguji, ale nejsou soucasti zadani
     // sProcessMgr.Create_Process(__counter_task_elf, __counter_task_elf_len, false);
-    //sProcessMgr.Create_Process(__counter_task_elf, __counter_task_elf_len, false);
-    //sProcessMgr.Create_Process(__sos_task_elf, __sos_task_elf_len, false);
+    // sProcessMgr.Create_Process(__counter_task_elf, __counter_task_elf_len, false);
+    // sProcessMgr.Create_Process(__sos_task_elf, __sos_task_elf_len, false);
     // sProcessMgr.Create_Process(__oled_task_elf, __oled_task_elf_len, false);
-    //sProcessMgr.Create_Process(__logger_task_elf, __logger_task_elf_len, false);
-    //sProcessMgr.Create_Process(__tilt_task_elf, __tilt_task_elf_len, false);
+    // sProcessMgr.Create_Process(__logger_task_elf, __logger_task_elf_len, false);
+    // sProcessMgr.Create_Process(__tilt_task_elf, __tilt_task_elf_len, false);
 
 
-    //sProcessMgr.Create_Process(__BLURED_LED_task_elf, __BLURED_LED_task_elf_len, false);
+    // sProcessMgr.Create_Process(__BLURED_LED_task_elf, __BLURED_LED_task_elf_len, false);
     // sProcessMgr.Create_Process(__BLULED_task_elf, __BLULED_task_elf_len, false);
     // sProcessMgr.Create_Process(__REDLED_task_elf, __REDLED_task_elf_len, false);
     sProcessMgr.Create_Process(__DEMO_OLED_task_elf, __DEMO_OLED_task_elf_len, false);
