@@ -34,6 +34,7 @@ class CProcess_Manager {
   private:
     uint32_t mLast_PID;                     // posledni pridelene PID
     TProcess_List_Node* mProcess_List_Head; // uvodni uzel spojoveho seznamu procesu
+    TProcess_Struct* dereferred_cleanup_process = nullptr; //ukazatel na proces, po kterem je potreba uklidit
 
   private:
   protected:
@@ -43,11 +44,16 @@ class CProcess_Manager {
     // vytvori proces, ktery bude vykonavat zadanou funkci, vraci jeho PID; volitelne muze jit o systemovy proces
     uint32_t Create_Process(unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system, uint32_t sched_static_priority = 5);
 
-    // ukonci proces, nastavi ho jako zombie, ukonci vsechny jeho vlakna, zavre soubory,
-    void Terminate_Process(TProcess_Struct* proc);
+    // zastavi proces, nastavi ho jako zombie, zastavi vsechny jeho vlakna, zavre soubory
+    void Terminate_Process(TProcess_Struct* proc, uint32_t exit_code = 0);
+    // vycisti proces, prevezme si jeho navratovou hodnotu - vola se vzdy z kontextu jineho procesu
+    uint32_t Reap_Process(uint32_t pid);
 
     // vrati uzel procesu ve spojovem seznamu procesu dle PID, nebo nullptr, pokud proces neexistuje
     TProcess_List_Node* Get_Process_Node_By_PID(uint32_t pid) const;
+
+    // odebere uzel z listu procesu
+    void Unlink_Process_Node(TProcess_List_Node* node);
 
     // vrati strukturu procesu se zadanym PID, nebo nullptr, pokud proces neexistuje
     TProcess_Struct* Get_Process_By_PID(uint32_t pid) const;

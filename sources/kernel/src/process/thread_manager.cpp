@@ -206,7 +206,7 @@ void CThread_Manager::Free_Thread_Resources(TProcess_Struct *proc, TThread_List_
         return;
     }
 
-    // free stack page
+    // uvolnit stranku pameti, na ktere lezi zasobnik
     uint32_t stack_page_virt = (Stack_Area_Virtual_Base + Stack_Guard_Size + (Stack_Size + Stack_Guard_Size) * thread_node->thread->tid);
     uint32_t stack_page_phys = (proc->page_table[stack_page_virt / PT_Region_Size] & 0xFFF00000);
 
@@ -217,6 +217,10 @@ void CThread_Manager::Free_Thread_Resources(TProcess_Struct *proc, TThread_List_
     sKernelMem.Free(thread_node->thread);
     Unlink_Thread_Node(thread_node);
     sKernelMem.Free(thread_node);
+}
+
+void CThread_Manager::Free_Thread_Resources(TProcess_Struct* proc, TThread_Struct* thread) {
+    Free_Thread_Resources(proc, Get_Thread_List_Node(thread));
 }
 
 bool CThread_Manager::Notify_Thread(TThread_Struct* thread) {
@@ -367,7 +371,7 @@ void CThread_Manager::Handle_Thread_SWI(NSWI_Thread_Service svc_idx, uint32_t r0
         case NSWI_Thread_Service::Exit_Thread:
             // pokud konci hlavni vlakno procesu tak ho terminuji
             if (cur_thread->tid == 0) {
-                sProcessMgr.Terminate_Process(cur_thread->process);
+                sProcessMgr.Terminate_Process(cur_thread->process, r0);
             } else {
                 Handle_Exit_Thread(cur_thread, r0);
             }
@@ -383,6 +387,16 @@ PIDTID CThread_Manager::GetPIDTID(const TThread_Struct* thread) {
 }
 
 TThread_List_Node* CThread_Manager::Get_Thread_List_Head() const { return this->mThread_List_Head; }
+
+TThread_List_Node* CThread_Manager::Get_Thread_List_Node(TThread_Struct* thread) const {
+    auto* node = Get_Thread_List_Head();
+    while (node && node->thread != thread) {
+        node = node->next;
+    }
+    if (!node) return nullptr;
+
+    return node; 
+}
 TThread_Struct* CThread_Manager::Get_Thread_By_PIDTID(PIDTID pidtid) const {
     if (pidtid.pid == Invalid_PID || pidtid.tid == Invalid_TID) {
         return nullptr;

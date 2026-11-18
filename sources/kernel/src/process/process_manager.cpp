@@ -43,6 +43,27 @@ TProcess_Struct* CProcess_Manager::Get_Process_By_PID(uint32_t pid) const {
     return node->process;
 }
 
+void CProcess_Manager::Unlink_Process_Node(TProcess_List_Node* node) {
+    if (!node) {
+        return;
+    }
+
+    if (node == mProcess_List_Head) {
+        mProcess_List_Head = node->next;
+    }
+
+    if (node->prev) {
+        node->prev->next = node->next;
+    }
+
+    if (node->next) {
+        node->next->prev = node->prev;
+    }
+
+    node->prev = nullptr;
+    node->next = nullptr;
+}
+
 bool CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file) {
     TProcess_Struct* process = Get_Process_By_PID(pid);
     if (!process) {
@@ -120,17 +141,55 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
     return process->pid;
 }
 
-void CProcess_Manager::Terminate_Process(TProcess_Struct* proc) {
-    // zavreme vsechny soubory procesu
+
+
+void CProcess_Manager::Terminate_Process(TProcess_Struct* proc, uint32_t exit_code) {
+    // zavreme vsechny soubory procesu - to muzeme
     Close_All_Files(proc);
 
     // TODO:
     // ukoncit vsechny vlakna az na to ve kterym tohle bezi?
     // zjistit jak to je s poslednim stackem? - uvolneni page-table
     //
-    // nastavit jako zombie + retcode -> nastavit to hlavnimu vlaknu,
-    // ale co kdyz terminate nebezi v hlavnim vlaknu?
+    // nastavit jako zombie + retcode -> nastavit to hlavnimu vlaknu - to je blbost, potrebuju zabit vsechna vlakna
+    // ale co kdyz terminate nebezi v hlavnim vlaknu? to je nam podle me jedno, udelame to ze o uklid se stara ten kdo si vybira navratovou hodnotu
+   
+    // zabranime v behu vsech vlaken
+    for (TThread_Struct* thread : proc->threads) {
+        thread->state = NThread_State::Zombie;
+    }
+    proc->exit_code = exit_code;
+    // uklid a vyber navratove hodnoty je zalezitost toho, kdo proces bude sklizet.
+    // bud jiny proces, nebo na velkem systemu by to byl init. Vzhledem k tomu, ze neumime dynamicky zavadet procesy neni treba resit dalsi implementaci.
 }
+
+uint32_t CProcess_Manager::Reap_Process(uint32_t pid) { 
+    // najdeme proces, ktery sklizime
+
+    auto* procnode = Get_Process_Node_By_PID(pid);
+    if (!procnode) return Invalid_PID; // pokud dany proces neexistuje tak vratime neco napadne spatneho
+    auto* proc = procnode->process; // tahle dereference musi projit, pokud ne tak mame vetsi problem nez ze dereferujeme nullptr
+    for (TThread_Struct* thread : proc->threads) { 
+        if (thread)
+            if (thread->state != NThread_State::Zombie) { //pokud nejake vlakno neni zobmie (chteli bychom sklidit proces ktery jeste neskoncil)
+                return Invalid_PID; //tak vratime neco napadne spatneho
+            }
+    }
+    for (TThread_Struct* thread : proc->threads) { //uvolnime vsechna vlakna - zde zcela rizene obchazim komentar, protoze ten se tyka ukoncovani vlakna z POV vlakna
+        if (thread) {
+            sThread_Manager.Free_Thread_Resources(proc, thread);
+        }
+    }
+
+    // a na zaver vyzvedneme exit code a uklidime proces
+    uint32_t exit_code = proc->exit_code;
+    Unlink_Process_Node(procnode);
+    sKernelMem.Free(procnode);
+    sPT_Alloc.Free(proc->page_table);
+    sKernelMem.Free(proc);
+    return 0; 
+}
+
 
 uint32_t CProcess_Manager::Map_File_To_Current(IFile* file) {
     // xTODO: zamek

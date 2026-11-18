@@ -50,11 +50,16 @@ class CThread_Manager {
     // getter uvodniho uzlu listu vlaken
     TThread_List_Node* Get_Thread_List_Head() const;
 
+    // v seznamu vlaken najde uzel obsahujici dane vlakno. Pokud nenajde (vlakno je zombie) tak vraci nullptr
+    TThread_List_Node* Get_Thread_List_Node(TThread_Struct* thread) const;
+
     // nastavi status vlakna jako zombie a jeho exit_code
     void Handle_Exit_Thread(TThread_Struct* thread, uint32_t exit_code);
 
     // uvolni zdroje souvisejici s vlaknem, uzel v listu, zasobnik, nelze volat nad hlavnim vlaknem
     void Free_Thread_Resources(TProcess_Struct* proc, TThread_List_Node* thread_node);
+    // uvolni zdroje souvisejici s vlaknem, uzel v listu, zasobnik, nelze volat nad hlavnim vlaknem
+    void Free_Thread_Resources(TProcess_Struct* proc, TThread_Struct* thread);
 
     // odebere uzel z listu vlaken
     void Unlink_Thread_Node(TThread_List_Node* node);
