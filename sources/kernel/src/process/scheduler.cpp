@@ -177,6 +177,10 @@ void CScheduler::Switch_To(TThread_List_Node* node) {
     mCurrent_Thread->sched_counter = mCurrent_Thread->process->sched_static_priority;
     mCurrent_Thread->state = NThread_State::Running;
 
+    if(!node->thread->is_multi_file_wait) { //pokud vlakno necekalo na vice souboru, tak musime tuto bitmapu smazat (doted nam zajistovala ze soubor, ktery jsme meli otevreny, nam sice nekdo zavrel, ale nenahradil ho jinym, coz by bylo pro nas matouci)
+        node->thread->multi_wait_fd_bitmap = 0;
+    }
+
     // pokud je to poprve, co je proces planovany, musime to vzit jeste pres malou odbocku ("bootstrap")
     if (is_first_time) {
         context_switch_first(&node->thread->cpu_context, old);

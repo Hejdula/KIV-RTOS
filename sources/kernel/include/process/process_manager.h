@@ -59,7 +59,7 @@ class CProcess_Manager {
     TProcess_Struct* Get_Process_By_PID(uint32_t pid) const;
 
     // notifikuje vsechna vlakna blokovaneho procesu spici nad necim (napr. spici nad mutexem, souborem, ...)
-    bool Notify_Process(uint32_t pid, IFile* notifier_file);
+    uint32_t Notify_Process(uint32_t pid, IFile* notifier_file);
 
     // namapuje otevreny soubor na handle
     uint32_t Map_File_To_Current(IFile* file);

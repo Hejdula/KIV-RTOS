@@ -64,7 +64,7 @@ void CProcess_Manager::Unlink_Process_Node(TProcess_List_Node* node) {
     node->next = nullptr;
 }
 
-bool CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file) {
+uint32_t CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file) {
     TProcess_Struct* process = Get_Process_By_PID(pid);
     if (!process) {
         return false;
@@ -84,17 +84,20 @@ bool CProcess_Manager::Notify_Process(uint32_t pid, IFile* notifier_file) {
     }
 
     // postupne vzbudime vsechny vlakna ktere cekaji nad danym souborem
-    bool notified_some;
+    uint32_t notified_count = 0;
     for (TThread_Struct* thread : process->threads) {
         if (thread->multi_wait_fd_bitmap & 1 << handle_index) {
             if (thread->is_multi_file_wait) {
                 thread->multi_wait_ready_fd = handle_index;
             }
-            notified_some |= sThread_Manager.Notify_Thread(thread);
+            else {
+                thread->multi_wait_fd_bitmap |= 1 << handle_index; // guard proti tomu aby nam nekdo na dany file handle nenamapaoval novy soubor, kdyz budeme prepinat kontext na toto vlakno tak to vynulujeme
+            }
+            notified_count += static_cast<uint32_t>(sThread_Manager.Notify_Thread(thread));
         }
     }
 
-    return notified_some;
+    return notified_count;
 }
 
 uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned int elf_file_length, bool is_system, uint32_t sched_static_priority) {
@@ -146,15 +149,8 @@ uint32_t CProcess_Manager::Create_Process(unsigned char* elf_file_data, unsigned
 void CProcess_Manager::Terminate_Process(TProcess_Struct* proc, uint32_t exit_code) {
     // zavreme vsechny soubory procesu - to muzeme
     Close_All_Files(proc);
-
-    // TODO:
-    // ukoncit vsechny vlakna az na to ve kterym tohle bezi?
-    // zjistit jak to je s poslednim stackem? - uvolneni page-table
-    //
-    // nastavit jako zombie + retcode -> nastavit to hlavnimu vlaknu - to je blbost, potrebuju zabit vsechna vlakna
-    // ale co kdyz terminate nebezi v hlavnim vlaknu? to je nam podle me jedno, udelame to ze o uklid se stara ten kdo si vybira navratovou hodnotu
    
-    // zabranime v behu vsech vlaken
+    // zabranime v behu vsech vlaken tohoto procesu
     for (TThread_Struct* thread : proc->threads) {
         thread->state = NThread_State::Zombie;
     }

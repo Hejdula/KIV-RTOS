@@ -35,8 +35,8 @@ struct TThread_Struct {
     uint32_t tid;                   // thread ID v ramci procesu
     NThread_State state;            // stav vlakna pro ucely planovace
     uint32_t sched_counter;         // pocitadlo - jakmile je vlakno naplanovano, zkopiruje se do nej priorita procesu a kazdy tik casovace snizuje toto cislo o 1;// na 0 se preplanuje na jine vlakno
-    uint32_t multi_wait_fd_bitmap;  // bitmapa souboru, na ktere vlakno ceka pri WaitAll - cekani na vice souboru najednou
-    bool is_multi_file_wait;        // indikuje, ze proces ceka na vice souboru najednou (WaitAll)
+    uint32_t multi_wait_fd_bitmap;  // bitmapa souboru, na ktere vlakno ceka pri WaitAll - cekani na vice souboru najednou. Pokud je is_multi_file_wait false, tak slouzi jenom jako guard proti podvrzeni souboru (pokud by jine vlakno odmapovalo soubor z daneho indexu a namapovalo by jiny, tak bychom si toho nemeli jak vsimnout.)
+    bool is_multi_file_wait;        // indikuje, ze proces ceka na vice souboru najednou (WaitAll). Pokud neceka tak slozi pole k blokovani pozic na mapovani souboru a scheduler ho pravidelne maze.
     uint32_t multi_wait_ready_fd;   // soubor, ktery byl prvni pripraven k operaci pri cekani na vice souboru (WaitAll)
     int exit_code;                  // navratovy kod vlakna
     uint32_t sleep_timer;           // casovac pro uspana vlakna - jakmile systemovy citac prekroci tuto hodnotu, vlakno je odblokovano

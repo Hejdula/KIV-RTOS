@@ -9,6 +9,7 @@
 
 // maximalni pocet otevrenych souboru
 constexpr uint32_t Max_Process_Opened_Files = 16;
+static_assert(Max_Process_Opened_Files < 32, "Code does not support more than 32 files per process by design!"); // kontrola ze se vsechny soubory vejdou do uint32 bitmapy
 // maximalni pocet vlaken
 constexpr uint32_t Max_Process_Threads = 16;
 // hodnota, ktera znamena, ze proces nema casovy limit na vzbuzeni / deadline
@@ -32,7 +33,7 @@ struct TProcess_Struct {
     uint32_t pid;                                   // ID procesu, kladne nenulove cislo
     bool is_system;                                 // zda-li se jedna o systemovy process
     uint32_t sched_static_priority;                 // staticka priorita procesu (dana pri jeho vytvareni)
-    IFile* opened_files[Max_Process_Opened_Files];  // otevrene soubory; index je zaroven handle, souborove veci jsou sdilene mezi vlakny, pro ne musime sahat do
+    IFile* opened_files[Max_Process_Opened_Files];  // otevrene soubory; index je zaroven handle, souborove veci jsou sdilene mezi vlakny, pro ne musime sahat do   
     int exit_code;                                  // navratovy kod procesu; nastaveny pri terminaci posledniho vlakna
     uint32_t* page_table;                           // adresa tabulky stranek procesu ve virtualnim prostoru kernelu
     unsigned long ttbr0;                            // obsah registru pro nastaveni tabulky stranek procesu
